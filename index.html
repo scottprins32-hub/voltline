@@ -26,6 +26,8 @@
   --shadow:0 10px 30px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+:root[data-night="1"] :focus-visible{outline-color:#6ee7b7}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
 #c{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
 #c.grabbing{cursor:grabbing}
@@ -199,8 +201,9 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 .ui.pre{opacity:0;transform:translateY(14px)}
 .ui{transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
 #top{transition-delay:.05s}#kpis{transition-delay:.18s}#tracker{transition-delay:.32s}#table{transition-delay:.42s}#hint{transition-delay:.6s}
-.autochip{position:absolute;top:-7px;right:-4px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:1px 4px;border-radius:4px;background:var(--accent);color:#fff;pointer-events:none;opacity:0;transition:opacity .3s}
-.autochip.on{opacity:1}
+.autochip{position:absolute;top:-9px;right:-6px;font:inherit;font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:2px 5px;border-radius:5px;border:1px solid var(--accent);background:var(--glass-strong);color:var(--accent-2);cursor:pointer;line-height:1;transition:all .3s;z-index:1}
+.autochip.on{background:var(--accent);color:#fff}
+.autochip:not(.on){opacity:.75}
 #areasMob{display:none}
 @media (max-width:900px){#loading .eyebrow span:nth-child(-n+5){display:none}#loading .eyebrow{gap:10px}#loading h1{font-size:clamp(84px,24vw,140px)}}
 @media (prefers-reduced-motion:reduce){.ui,#loading,.toggle::after,.kpi .val{transition:none!important}.status i{animation:none}}
@@ -240,7 +243,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="c" aria-label="3D factory floor. Drag to pan, right-drag to rotate, scroll to zoom, click an object to inspect it." role="img"></canvas>
 <div id="wx"></div>
 <div id="grain"></div><div id="vig"></div>
 <div id="loading" role="button" aria-label="Enter the factory floor">
@@ -269,7 +272,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   </div>
   <div class="spacer"></div>
   <div style="position:relative">
-    <button class="pill" id="wxBtn"><span id="wxIcon">☀️</span><span id="wxName">Clear</span><span style="font-family:var(--mono);color:var(--ink-3)" id="wxTemp">31°C</span></button>
+    <button class="pill" id="wxBtn" aria-haspopup="menu" aria-label="Weather"><span id="wxIcon">☀️</span><span id="wxName">Clear</span><span style="font-family:var(--mono);color:var(--ink-3)" id="wxTemp">31°C</span></button>
     <div class="menu glass" id="wxMenu">
       <button data-wx="clear" class="on"><span class="em">☀️</span>Clear</button>
       <button data-wx="monsoon"><span class="em">🌧️</span>Monsoon</button>
@@ -279,10 +282,10 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   </div>
   <div class="pill clock" id="clock" style="position:relative"><span id="clockTxt">00:00:00</span><span class="takt"><svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect id="taktRing" x="1" y="1" width="98" height="32" rx="11"/></svg></span></div>
   <div style="position:relative">
-    <button class="pill" id="alBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="badge" id="alCount">0</span></button>
+    <button class="pill" id="alBtn" aria-haspopup="menu" aria-label="Alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="badge" id="alCount">0</span></button>
     <div id="alerts" class="glass"></div>
   </div>
-  <div style="position:relative;display:flex"><span class="autochip on" id="autoChip">AUTO</span><button class="toggle" id="night" aria-label="Day / night"><svg class="sun" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg><svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+  <div style="position:relative;display:flex"><button class="autochip on" id="autoChip" aria-label="Automatic day and night cycle" title="Automatic day/night">AUTO</button><button class="toggle" id="night" aria-label="Day / night"><svg class="sun" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg><svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
   <div class="pill user" style="padding:0 10px 0 4px;gap:8px"><div class="avatar">SP</div><div style="line-height:1.1"><div style="font-weight:600">Shift lead</div><div style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">Shift B · Line 1</div></div></div>
 </header>
 
@@ -296,7 +299,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 </section>
 
 <aside id="detail" class="ui glass">
-  <div class="hd"><div><h3 id="dName">—</h3><div class="type" id="dType">—</div></div><button class="x" id="dClose">×</button></div>
+  <div class="hd"><div><h3 id="dName">—</h3><div class="type" id="dType">—</div></div><button class="x" id="dClose" aria-label="Close details">×</button></div>
   <div id="dStatus"></div>
   <div class="stats" id="dStats"></div>
   <div id="dBar"></div>
@@ -749,7 +752,7 @@ function setWeather(k){WX=WXS[k];document.getElementById('wxIcon').textContent=W
 document.querySelectorAll('#wxMenu button').forEach(b=>b.onclick=()=>setWeather(b.dataset.wx));
 const autoChip=document.getElementById('autoChip');
 document.getElementById('night').onclick=()=>{if(autoCycle){autoCycle=false;night=nightT<.5}else if(night){night=false}else{night=true}autoChip.classList.toggle('on',autoCycle);showToast(night?'Night shift lighting':'Day shift lighting')};
-document.getElementById('night').ondblclick=()=>{autoCycle=true;autoChip.classList.add('on');showToast('Automatic day/night')};
+autoChip.onclick=e=>{e.stopPropagation();autoCycle=!autoCycle;autoChip.classList.toggle('on',autoCycle);if(!autoCycle)night=nightT>=.5;showToast(autoCycle?'Automatic day/night':'Day/night held')};
 const _skyTop=new THREE.Color(),_skyHor=new THREE.Color(),_sunCol=new THREE.Color();
 const winMats=[M.window];
 function updateEnv(dt){
