@@ -213,8 +213,8 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   #areasMob::-webkit-scrollbar{display:none}
   #areasMob button{flex:0 0 auto;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(14px);font:inherit;font-weight:600;font-size:12px;color:var(--ink);box-shadow:var(--shadow)}
   #areasMob button.on{background:var(--accent);color:#fff;border-color:transparent}
-  #detail{border-radius:22px 22px 0 0;bottom:0;left:0;right:0;top:auto;width:auto;max-height:52vh;padding:8px 16px calc(16px + var(--sab) + 58px);transform:translateY(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex}
-  #detail.open{transform:translateY(0)}
+  #detail{border-radius:22px 22px 0 0;bottom:0;left:0;right:0;top:auto;width:auto;max-height:52vh;padding:8px 16px calc(16px + var(--sab) + 58px);transform:translateY(100%);visibility:hidden;transition:transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s .45s;display:flex}
+  #detail.open{transform:translateY(0);visibility:visible;transition:transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s}
   #detail::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 8px}
   #detail .x{width:40px;height:40px;font-size:20px}
   .seg button,.tabs button{min-height:36px}
@@ -290,7 +290,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 <div id="hint" class="ui pre glass"><span><b>drag</b> pan</span><span><b>right-drag</b> rotate</span><span><b>scroll</b> zoom</span><span><b>click</b> anything</span></div>
 
 <section id="kpis" class="ui pre">
-  <div class="kpi glass"><div class="lbl">Cars built today <span class="status"><i></i>LIVE</span></div><div class="val" id="kCars">0<small>/ 412</small></div><div class="sub">target pace <b id="kCarsD">+0</b></div><svg class="spark" id="sp1" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl">Cars built today <span class="status"><i></i>LIVE</span></div><div class="val" id="kCars">0<small>/ 412</small></div><div class="sub"><b id="kCarsD">+0</b> vs shift target</div><svg class="spark" id="sp1" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
   <div class="kpi glass"><div class="lbl">Line takt time</div><div class="val" id="kTakt">68.4<small>s</small></div><div class="sub">plan 70.0s · <b id="kTaktD">−1.6s</b></div><svg class="spark" id="sp2" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
   <div class="kpi glass"><div class="lbl">First pass yield</div><div class="val" id="kFpy">97.2<small>%</small></div><div class="sub">rework queue <b id="kFpyD">3</b></div><svg class="spark" id="sp3" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
 </section>
@@ -703,7 +703,7 @@ function addAlert(level,title,msg,target){alerts.unshift({level,title,msg,target
 function renderAlerts(){document.getElementById('alCount').textContent=alerts.filter(a=>a.level!=='ok').length;alBox.innerHTML=alerts.map((a,i)=>`<div class="al ${a.level}" data-i="${i}"><i></i><div><b>${a.title}</b><span>${a.msg}</span></div><small>${a.t.toTimeString().slice(0,5)}</small></div>`).join('')||'<div class="al"><span>No alerts</span></div>'}
 alBox.onclick=e=>{const el=e.target.closest('.al');if(!el)return;const a=alerts[+el.dataset.i];if(a?.target)select(a.target);alBox.classList.remove('open')}
 function spark(id,arr){const el=document.getElementById(id);if(!el||arr.length<2)return;const a=arr.slice(-30);const mn=Math.min(...a),mx=Math.max(...a),r=mx-mn||1;const pts=a.map((v,i)=>[i/(a.length-1)*140,26-(v-mn)/r*22]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');el.innerHTML=`<path class="area" d="${d} L140 28 L0 28Z"/><path d="${d}"/>`}
-function updateKPIs(){const h=new Date().getHours()+new Date().getMinutes()/60;const pace=Math.round(kpi.target*(h/24));const d=kpi.cars-pace;const kd=document.getElementById('kCarsD');kd.textContent=(d>=0?'+':'')+d+' vs pace';kd.className=d<0?'neg':'';
+function updateKPIs(){const h=new Date().getHours()+new Date().getMinutes()/60;const pace=Math.round(kpi.target*(h/24));const d=kpi.cars-pace;const kd=document.getElementById('kCarsD');kd.textContent=(d>=0?'+':'−')+Math.abs(d);kd.className=d<0?'neg':'';
   document.getElementById('kTakt').innerHTML=`${kpi.takt.toFixed(1)}<small>s</small>`;const td=document.getElementById('kTaktD');td.textContent=(kpi.takt-70>=0?'+':'−')+Math.abs(kpi.takt-70).toFixed(1)+'s';td.className=kpi.takt>70?'neg':'';
   document.getElementById('kFpy').innerHTML=`${kpi.fpy.toFixed(1)}<small>%</small>`;document.getElementById('kFpyD').textContent=kpi.rework;spark('sp1',kpi.history.length>1?kpi.history:[0,0]);spark('sp2',kpi.taktH);spark('sp3',kpi.fpyH)}
 // table
