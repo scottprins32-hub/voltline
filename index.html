@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Voltline — live 3D EV gigafactory</title>
+<meta name="description" content="Voltline: a live, playable 3D digital twin of an EV gigafactory. Watch cars get stamped, welded, painted, packed and tested in real time.">
+<meta name="theme-color" content="#f3f4f6" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="Voltline — live 3D EV gigafactory"><meta property="og:description" content="A playable factory-tycoon dashboard built in Three.js. Click any robot, cart or car."><meta property="og:type" content="website">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2310B981'/%3E%3Cpath d='M36 8 18 36h12l-2 20 18-28H34z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#10B981; --accent-2:#059669; --accent-soft:rgba(16,185,129,.14);
+  --bg:#f3f4f6; --ink:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+  --glass:rgba(255,255,255,.62); --glass-strong:rgba(255,255,255,.82); --line:rgba(15,23,42,.08);
+  --shadow:0 10px 30px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.06);
+  --radius:16px; --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'Inter',system-ui,sans-serif; --serif:'Instrument Serif',Georgia,serif; --sab:env(safe-area-inset-bottom,0px); --sat:env(safe-area-inset-top,0px);
+  --danger:#ef4444; --warn:#f59e0b;
+}
+:root[data-night="1"]{
+  --bg:#0b1020; --ink:#e5e7eb; --ink-2:#a1a7b5; --ink-3:#6b7280;
+  --glass:rgba(17,24,39,.62); --glass-strong:rgba(17,24,39,.85); --line:rgba(255,255,255,.08);
+  --shadow:0 10px 30px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
+#c{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+#c.grabbing{cursor:grabbing}
+#c.pick{cursor:pointer}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--radius)}
+.ui{position:fixed;z-index:5;pointer-events:none}
+.ui>*{pointer-events:auto}
+/* top bar */
+#top{top:14px;left:14px;right:14px;height:56px;display:flex;align-items:center;gap:10px;padding:0 10px 0 14px}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--serif);font-style:italic;font-weight:400;font-size:24px;letter-spacing:-.01em;margin-right:6px;line-height:1}
+.logo i{width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-style:normal;font-size:14px;box-shadow:0 4px 12px rgba(16,185,129,.4)}
+.logo small{font-family:var(--mono);font-size:10px;color:var(--ink-3);font-weight:500;margin-left:2px}
+.search{flex:0 1 260px;position:relative}
+.search input{width:100%;height:34px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.5);padding:0 12px 0 32px;font:inherit;color:var(--ink);outline:none}
+:root[data-night="1"] .search input{background:rgba(255,255,255,.06)}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search svg{position:absolute;left:10px;top:9px;width:16px;height:16px;color:var(--ink-3)}
+.search-results{position:absolute;top:40px;left:0;right:0;display:none;flex-direction:column;padding:6px;max-height:260px;overflow:auto}
+.search-results.open{display:flex}
+.search-results button{text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:8px;font:inherit;color:var(--ink);cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.search-results button:hover{background:var(--accent-soft)}
+.search-results button span{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.seg{display:flex;gap:2px;padding:3px;border-radius:10px;background:rgba(15,23,42,.06)}
+:root[data-night="1"] .seg{background:rgba(255,255,255,.08)}
+:root[data-night="1"] .seg button{color:#cbd5e1}
+:root[data-night="1"] .pill{color:#e5e7eb}
+:root[data-night="1"] .search input{color:#e5e7eb}
+.seg button{border:0;background:transparent;height:28px;padding:0 11px;border-radius:8px;font:inherit;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--accent);color:#fff;box-shadow:0 3px 8px rgba(16,185,129,.35)}
+.spacer{flex:1}
+.pill{height:34px;display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.45);font-weight:500;color:var(--ink);cursor:pointer;font:inherit;white-space:nowrap;position:relative}
+:root[data-night="1"] .pill{background:rgba(255,255,255,.05)}
+.pill:hover{border-color:var(--accent)}
+.pill svg{width:16px;height:16px}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pill .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.clock{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.menu{position:absolute;top:42px;right:0;min-width:200px;padding:6px;display:none;flex-direction:column;gap:2px}
+.menu.open{display:flex}
+.menu button{border:0;background:transparent;text-align:left;padding:9px 10px;border-radius:9px;font:inherit;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:10px}
+.menu button:hover{background:var(--accent-soft)}
+.menu button.on{font-weight:600;color:var(--accent-2)}
+.menu .em{width:22px;text-align:center;font-size:15px}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#10B981,#0ea5e9);display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:var(--shadow)}
+.toggle{width:44px;height:26px;border-radius:13px;background:rgba(15,23,42,.14);position:relative;border:0;cursor:pointer;flex:0 0 auto}
+:root[data-night="1"] .toggle{background:var(--accent)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+:root[data-night="1"] .toggle::after{transform:translateX(18px)}
+.toggle svg{position:absolute;width:12px;height:12px;top:7px;color:#fff}
+.toggle .sun{left:7px}.toggle .moon{right:7px;color:var(--ink-3)}
+/* KPI */
+#kpis{top:84px;left:14px;display:flex;gap:10px}
+.kpi{width:168px;padding:12px 14px}
+.kpi .lbl{font-size:11px;color:var(--ink-2);font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.kpi .val{font-size:26px;font-weight:700;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .val small{font-size:13px;color:var(--ink-3);font-weight:500;margin-left:3px}
+.kpi .sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:5px}
+.kpi .sub b{color:var(--accent-2);font-weight:500}
+.kpi .sub b.neg{color:var(--danger)}
+.spark{height:28px;margin-top:6px;display:block}
+.spark path{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round}
+.spark .area{fill:var(--accent);opacity:.12;stroke:none}
+/* detail */
+#detail{top:84px;right:14px;width:290px;padding:14px;display:none;flex-direction:column;gap:10px;max-height:calc(100vh - 110px);overflow:auto}
+#detail.open{display:flex}
+#detail .hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#detail h3{font-size:16px;font-weight:700;letter-spacing:-.02em}
+#detail .type{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+#detail .x{border:0;background:transparent;width:26px;height:26px;border-radius:8px;color:var(--ink-3);cursor:pointer;font-size:16px}
+#detail .x:hover{background:var(--line);color:var(--ink)}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent-2)}
+.status.warn{background:rgba(245,158,11,.15);color:#b45309}
+.status.bad{background:rgba(239,68,68,.14);color:#b91c1c}
+.status i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{padding:9px 10px;border-radius:10px;background:rgba(15,23,42,.04);border:1px solid var(--line)}
+:root[data-night="1"] .stat{background:rgba(255,255,255,.04)}
+.stat .k{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.stat .v{font-family:var(--mono);font-size:13px;margin-top:3px;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:rgba(15,23,42,.08);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.follow{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--ink-2)}
+.follow b{color:var(--accent-2)}
+/* build tracker */
+#tracker{left:14px;bottom:14px;width:300px;padding:14px}
+#tracker h4,#table h4{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center}
+#tracker h4 span{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--accent-2)}
+.steps{display:flex;align-items:flex-start;justify-content:space-between;margin-top:14px;position:relative}
+.steps::before{content:"";position:absolute;left:12px;right:12px;top:11px;height:2px;background:var(--line)}
+.steps .fill{position:absolute;left:12px;top:11px;height:2px;background:var(--accent);transition:width .5s}
+.step{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;width:44px}
+.step i{width:22px;height:22px;border-radius:50%;background:var(--bg);border:2px solid var(--line);display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--ink-3);transition:all .3s;font-style:normal}
+.step.done i{background:var(--accent);border-color:var(--accent);color:#fff}
+.step.now i{border-color:var(--accent);color:var(--accent-2);box-shadow:0 0 0 4px var(--accent-soft)}
+.step span{font-size:9.5px;color:var(--ink-2);font-weight:500;text-align:center;line-height:1.15}
+.tr-meta{display:flex;justify-content:space-between;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.tr-meta b{color:var(--ink);font-weight:500}
+/* table */
+#table{right:14px;bottom:14px;width:430px;padding:12px 14px 10px}
+.tabs{display:flex;gap:2px;margin:10px 0 6px;padding:3px;border-radius:9px;background:rgba(15,23,42,.06)}
+:root[data-night="1"] .tabs{background:rgba(255,255,255,.06)}
+.tabs button{flex:1;border:0;background:transparent;height:26px;border-radius:7px;font:inherit;font-weight:500;color:var(--ink-2);cursor:pointer}
+.tabs button.on{background:var(--glass-strong);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tbl{max-height:170px;overflow:auto;margin:0 -6px}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;text-align:left;padding:6px;position:sticky;top:0;background:var(--glass-strong);backdrop-filter:blur(10px)}
+td{padding:6px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.m{font-family:var(--mono);font-size:10.5px}
+tr.row{cursor:pointer}
+tr.row:hover td{background:var(--accent-soft)}
+tr.sel td{background:var(--accent-soft);font-weight:600}
+.chip{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:600;background:var(--accent-soft);color:var(--accent-2)}
+.chip.warn{background:rgba(245,158,11,.15);color:#b45309}
+.chip.idle{background:rgba(15,23,42,.07);color:var(--ink-2)}
+.chip.bad{background:rgba(239,68,68,.14);color:#b91c1c}
+/* alerts */
+#alerts{position:absolute;top:42px;right:0;width:300px;padding:6px;display:none;flex-direction:column;gap:2px;max-height:300px;overflow:auto}
+#alerts.open{display:flex}
+.al{padding:8px 10px;border-radius:9px;display:flex;gap:9px;align-items:flex-start;cursor:pointer}
+.al:hover{background:var(--accent-soft)}
+.al i{width:8px;height:8px;border-radius:50%;margin-top:4px;flex:0 0 auto;background:var(--warn)}
+.al.bad i{background:var(--danger)}.al.ok i{background:var(--accent)}
+.al b{display:block;font-size:12px;font-weight:600}
+.al span{font-size:11px;color:var(--ink-2)}
+.al small{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-left:auto;white-space:nowrap}
+/* toast */
+#toast{left:50%;bottom:22px;transform:translate(-50%,20px);padding:9px 14px;font-weight:500;opacity:0;transition:all .3s;display:flex;gap:9px;align-items:center;font-size:12px}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+/* label */
+#lbl{position:fixed;z-index:4;pointer-events:none;transform:translate(-50%,-100%);display:none;flex-direction:column;align-items:center;gap:0}
+#lbl .tag{padding:5px 10px;border-radius:9px;font-size:11.5px;font-weight:600;white-space:nowrap;display:flex;gap:7px;align-items:center}
+#lbl .tag span{font-family:var(--mono);font-weight:400;color:var(--ink-3);font-size:10.5px}
+#lbl .stem{width:1px;height:26px;background:var(--accent)}
+#lbl .pt{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);margin-top:-1px}
+/* weather fx */
+#wx{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:0;transition:opacity 1.2s}
+#wx.fog{opacity:1;background:radial-gradient(ellipse at 50% 60%,rgba(255,255,255,0) 20%,rgba(226,232,240,.55) 90%)}
+#wx.heat{opacity:1;background:linear-gradient(180deg,rgba(251,191,36,.10),rgba(249,115,22,.05))}
+#wx.rain{opacity:1;background:linear-gradient(180deg,rgba(30,41,59,.12),rgba(30,41,59,.04))}
+@media (max-width:1280px){#hint{display:none!important}}
+#hint{left:50%;top:84px;transform:translateX(-50%);padding:7px 12px;font-size:11px;color:var(--ink-2);display:flex;gap:14px;font-family:var(--mono)}
+#hint b{color:var(--ink);font-weight:500}
+#loading{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:flex-end;padding:clamp(20px,5vw,64px);transition:opacity .9s cubic-bezier(.2,.8,.2,1),transform .9s cubic-bezier(.2,.8,.2,1);cursor:pointer}
+#loading.hide{opacity:0;pointer-events:none;transform:scale(1.02)}
+#loading .box{max-width:1100px}
+#loading .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+#loading .eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);display:inline-block}
+#loading h1{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(84px,19vw,260px);line-height:.86;letter-spacing:-.035em;margin:18px 0 20px -.04em;color:var(--ink)}
+#loading h1 b{font-weight:400;color:var(--accent)}
+#loading p{font-size:clamp(15px,1.6vw,20px);color:var(--ink-2);max-width:48ch;line-height:1.45}
+#loading p b{color:var(--ink);font-weight:600}
+#loading .prog{margin-top:26px;display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+#loading .prog i{display:block;width:160px;height:2px;background:var(--line);position:relative;overflow:hidden;border-radius:1px}
+#loading .prog i::after{content:"";position:absolute;inset:0;background:var(--accent);transform-origin:left;transform:scaleX(var(--p,0));transition:transform .3s}
+#loading .corner{position:absolute;top:clamp(20px,5vw,64px);right:clamp(20px,5vw,64px);font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);text-align:right;line-height:1.7}
+#loading .poster{position:absolute;right:clamp(20px,5vw,64px);bottom:clamp(20px,5vw,64px);width:min(34vw,420px);aspect-ratio:1;border-radius:28px;background:radial-gradient(120% 100% at 30% 20%,#b9f3dc,var(--accent) 60%,#047857);box-shadow:0 30px 80px rgba(16,185,129,.35), inset 0 1px 0 rgba(255,255,255,.5);display:none;overflow:hidden}
+@media(min-width:1100px){#loading .poster{display:block}}
+#loading .poster svg{position:absolute;inset:0;width:100%;height:100%}
+#grain{position:fixed;inset:0;pointer-events:none;z-index:3;opacity:.055;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px}
+:root[data-night="1"] #grain{mix-blend-mode:screen;opacity:.07}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(15,23,42,.14) 100%)}
+:root[data-night="1"] #vig{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 50%,rgba(0,0,0,.5) 100%)}
+#hov{position:fixed;z-index:4;pointer-events:none;transform:translate(14px,14px);padding:5px 9px;border-radius:8px;font-size:11px;font-weight:600;display:none;white-space:nowrap}
+#hov span{font-family:var(--mono);font-weight:400;color:var(--ink-3);margin-left:6px;font-size:10px}
+.takt{position:absolute;inset:-3px;border-radius:13px;pointer-events:none}
+.takt svg{width:100%;height:100%}
+.takt rect{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:1;stroke-dashoffset:1;pathLength:1;transition:stroke-dashoffset .25s linear;opacity:.9}
+.ui.pre{opacity:0;transform:translateY(14px)}
+.ui{transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1)}
+#top{transition-delay:.05s}#kpis{transition-delay:.18s}#tracker{transition-delay:.32s}#table{transition-delay:.42s}#hint{transition-delay:.6s}
+.autochip{position:absolute;top:-7px;right:-4px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:1px 4px;border-radius:4px;background:var(--accent);color:#fff;pointer-events:none;opacity:0;transition:opacity .3s}
+.autochip.on{opacity:1}
+#areasMob{display:none}
+@media (prefers-reduced-motion:reduce){.ui,#loading,.toggle::after,.kpi .val{transition:none!important}.status i{animation:none}}
+/* mobile */
+.mob-tabs{display:none}
+@media (max-width:900px){
+  #top{height:52px;gap:6px;padding:0 8px 0 12px;top:calc(10px + var(--sat));left:10px;right:10px}
+  .logo{font-size:22px}
+  #areasMob{display:flex;position:fixed;z-index:5;left:0;right:0;top:calc(70px + var(--sat));gap:6px;padding:0 10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #areasMob::-webkit-scrollbar{display:none}
+  #areasMob button{flex:0 0 auto;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(14px);font:inherit;font-weight:600;font-size:12px;color:var(--ink);box-shadow:var(--shadow)}
+  #areasMob button.on{background:var(--accent);color:#fff;border-color:transparent}
+  #kpis{top:calc(112px + var(--sat))}
+  #detail{border-radius:22px 22px 0 0;bottom:0;left:0;right:0;top:auto;width:auto;max-height:52vh;padding:8px 16px calc(16px + var(--sab) + 58px);transform:translateY(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex}
+  #detail.open{transform:translateY(0)}
+  #detail::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 8px}
+  #detail .x{width:40px;height:40px;font-size:20px}
+  .seg button,.tabs button{min-height:36px}
+  .mob-tabs{bottom:calc(10px + var(--sab))}
+  .mob-tabs button{height:46px}
+  #tracker,#table{bottom:calc(74px + var(--sab))}
+  #toast{bottom:calc(70px + var(--sab))}
+  .pill{height:38px}.toggle{width:46px;height:28px}.toggle::after{width:22px;height:22px}:root[data-night="1"] .toggle::after{transform:translateX(18px)}
+  #tracker.mob-on,#table.mob-on{display:block}
+  .logo span{display:none}.logo small{display:none}
+  .search{flex:1 1 auto}
+  #areas,#hint,.pill.user,.clock{display:none}
+  #kpis{top:70px;left:10px;right:10px;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .kpi{width:auto;flex:1 0 128px;padding:9px 11px}.kpi .val{font-size:20px}.spark{display:none}
+  #detail{top:auto;right:10px;left:10px;bottom:68px;width:auto;max-height:46vh}
+  #tracker,#table{left:10px;right:10px;width:auto;bottom:68px;display:none}
+  #tracker.mob-on,#table.mob-on{display:block}
+  .mob-tabs{display:flex;position:fixed;left:10px;right:10px;bottom:10px;z-index:6;gap:2px;padding:3px}
+  .mob-tabs button{flex:1;border:0;background:transparent;height:40px;border-radius:12px;font:inherit;font-weight:600;color:var(--ink-2)}
+  .mob-tabs button.on{background:var(--accent);color:#fff}
+  #toast{bottom:64px}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="wx"></div>
+<div id="grain"></div><div id="vig"></div>
+<div id="loading" role="button" aria-label="Enter the factory floor">
+  <div class="corner">World 17 · EV gigafactory<br>GF-01 · Chennai · Line 1<br><span id="ldTime">—</span></div>
+  <div class="poster" aria-hidden="true"><svg viewBox="0 0 400 400" fill="none"><g stroke="rgba(255,255,255,.55)" stroke-width="1.2"><path d="M60 250 200 170 340 250 200 330z"/><path d="M60 250v40l140 80 140-80v-40"/><path d="M200 330v40"/><path d="M110 221v-60l40-23v60M150 138l40-23v60M190 115l40 23v60M230 138l40 23v60"/><path d="M110 161l40-23 40 23 40-23 40 23"/><circle cx="300" cy="120" r="7"/><path d="M300 127v70"/></g><g fill="rgba(255,255,255,.9)"><circle cx="200" cy="250" r="4"/><circle cx="130" cy="210" r="3"/><circle cx="270" cy="210" r="3"/></g><text x="60" y="80" font-family="JetBrains Mono,monospace" font-size="11" letter-spacing="3" fill="rgba(255,255,255,.75)">NO PREVIEW YET → LIVE</text></svg></div>
+  <div class="box">
+    <div class="eyebrow"><i></i>Live digital twin<span>·</span><span>Three.js · no external models</span><span>·</span><span id="ldStep">warming up the line</span></div>
+    <h1>Volt<b>line</b></h1>
+    <p>An EV gigafactory you can walk through. <b>Stamping, welding, paint, battery drop, final assembly, test track.</b> Click any robot, cart or car to follow it.</p>
+    <div class="prog"><i id="ldBar"></i><span id="ldPct">0%</span><span>tap anywhere to enter</span></div>
+  </div>
+</div>
+<div id="hov" class="glass"><b id="hovName"></b><span id="hovMeta"></span></div>
+
+<div id="lbl"><div class="tag glass"><b id="lblName">Press 1</b><span id="lblMeta">VIN</span></div><div class="stem"></div><div class="pt"></div></div>
+
+<header id="top" class="ui pre glass">
+  <div class="logo"><i>⚡</i><span>Voltline</span><small>GF-01 · Chennai</small></div>
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" placeholder="Search station, VIN, cart…" autocomplete="off">
+    <div id="qres" class="search-results glass"></div>
+  </div>
+  <div class="seg" id="areas">
+    <button data-area="press">Press</button><button data-area="body">Body</button><button data-area="paint">Paint</button><button data-area="battery">Battery</button><button data-area="assembly">Assembly</button><button data-area="track">Test track</button>
+  </div>
+  <div class="spacer"></div>
+  <div style="position:relative">
+    <button class="pill" id="wxBtn"><span id="wxIcon">☀️</span><span id="wxName">Clear</span><span style="font-family:var(--mono);color:var(--ink-3)" id="wxTemp">31°C</span></button>
+    <div class="menu glass" id="wxMenu">
+      <button data-wx="clear" class="on"><span class="em">☀️</span>Clear</button>
+      <button data-wx="monsoon"><span class="em">🌧️</span>Monsoon</button>
+      <button data-wx="fog"><span class="em">🌫️</span>Winter fog</button>
+      <button data-wx="heat"><span class="em">🔥</span>Heatwave</button>
+    </div>
+  </div>
+  <div class="pill clock" id="clock" style="position:relative"><span id="clockTxt">00:00:00</span><span class="takt"><svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect id="taktRing" x="1" y="1" width="98" height="32" rx="11"/></svg></span></div>
+  <div style="position:relative">
+    <button class="pill" id="alBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg><span class="badge" id="alCount">0</span></button>
+    <div id="alerts" class="glass"></div>
+  </div>
+  <div style="position:relative;display:flex"><span class="autochip on" id="autoChip">AUTO</span><button class="toggle" id="night" aria-label="Day / night"><svg class="sun" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg><svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div>
+  <div class="pill user" style="padding:0 10px 0 4px;gap:8px"><div class="avatar">SP</div><div style="line-height:1.1"><div style="font-weight:600">Shift lead</div><div style="font-family:var(--mono);font-size:10px;color:var(--ink-3)">Shift B · Line 1</div></div></div>
+</header>
+
+<div id="areasMob" aria-label="Areas"><button data-area="overview">Overview</button><button data-area="press">Press</button><button data-area="body">Body</button><button data-area="paint">Paint</button><button data-area="battery">Battery</button><button data-area="assembly">Assembly</button><button data-area="track">Test track</button></div>
+<div id="hint" class="ui pre glass"><span><b>drag</b> pan</span><span><b>right-drag</b> rotate</span><span><b>scroll</b> zoom</span><span><b>click</b> anything</span></div>
+
+<section id="kpis" class="ui pre">
+  <div class="kpi glass"><div class="lbl">Cars built today <span class="status"><i></i>LIVE</span></div><div class="val" id="kCars">0<small>/ 412</small></div><div class="sub">target pace <b id="kCarsD">+0</b></div><svg class="spark" id="sp1" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl">Line takt time</div><div class="val" id="kTakt">68.4<small>s</small></div><div class="sub">plan 70.0s · <b id="kTaktD">−1.6s</b></div><svg class="spark" id="sp2" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl">First pass yield</div><div class="val" id="kFpy">97.2<small>%</small></div><div class="sub">rework queue <b id="kFpyD">3</b></div><svg class="spark" id="sp3" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+</section>
+
+<aside id="detail" class="ui glass">
+  <div class="hd"><div><h3 id="dName">—</h3><div class="type" id="dType">—</div></div><button class="x" id="dClose">×</button></div>
+  <div id="dStatus"></div>
+  <div class="stats" id="dStats"></div>
+  <div id="dBar"></div>
+  <div class="follow"><span id="dFollow">Camera following</span><b id="dPos"></b></div>
+</aside>
+
+<section id="tracker" class="ui pre glass">
+  <h4>Build tracker <span id="trVin">VIN —</span></h4>
+  <div class="steps" id="steps"><div class="fill" id="stepFill"></div>
+    <div class="step"><i>1</i><span>Stamped</span></div><div class="step"><i>2</i><span>Welded</span></div><div class="step"><i>3</i><span>Painted</span></div><div class="step"><i>4</i><span>Battery in</span></div><div class="step"><i>5</i><span>Assembled</span></div><div class="step"><i>6</i><span>Tested</span></div>
+  </div>
+  <div class="tr-meta"><span>elapsed <b id="trEl">0s</b></span><span>pack <b id="trPack">—</b></span><span>colour <b id="trCol">—</b></span></div>
+</section>
+
+<section id="table" class="ui pre glass">
+  <h4>Live floor <span style="font-family:var(--mono);text-transform:none;letter-spacing:0" id="tblMeta"></span></h4>
+  <div class="tabs"><button class="on" data-tab="stations">Stations</button><button data-tab="carts">Carts</button><button data-tab="vehicles">Vehicles</button></div>
+  <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+</section>
+
+<div class="mob-tabs glass"><button class="on" data-mob="none">Map</button><button data-mob="tracker">Build</button><button data-mob="table">Floor</button></div>
+<div id="toast" class="ui glass"><i></i><span id="toastMsg"></span></div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+const isMobile=matchMedia('(max-width:900px)').matches||matchMedia('(pointer:coarse)').matches;
+const reduceMotion=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const Q={dpr:Math.min(devicePixelRatio,isMobile?1.6:2),shadow:isMobile?1024:2048,bloom:!isMobile,rain:isMobile?700:1800};
+
+/* ───────────── core ───────────── */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Q.dpr);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+const DAY_SKY=new THREE.Color(0xf3f4f6), NIGHT_SKY=new THREE.Color(0x0b1020);
+scene.background=null;
+scene.fog=new THREE.Fog(DAY_SKY.clone(),260,520);
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,uniforms:{top:{value:new THREE.Color(0xdfe6ef)},hor:{value:new THREE.Color(0xf6f7f9)},sunDir:{value:new THREE.Vector3(0,1,0)},sunCol:{value:new THREE.Color(0xfff1d6)},glow:{value:.35}},
+ vertexShader:`varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+ fragmentShader:`uniform vec3 top,hor,sunDir,sunCol;uniform float glow;varying vec3 vW;void main(){vec3 d=normalize(vW);float h=clamp(d.y*1.4+.1,0.,1.);vec3 c=mix(hor,top,pow(h,.7));float s=max(dot(d,normalize(sunDir)),0.);c+=sunCol*(pow(s,48.)*.9+pow(s,6.)*.25)*glow;gl_FragColor=vec4(c,1.);}`});
+const skyDome=new THREE.Mesh(new THREE.SphereGeometry(900,32,16),skyMat);scene.add(skyDome);
+const STAR_N=700,starPos=new Float32Array(STAR_N*3);for(let i=0;i<STAR_N;i++){const a=Math.random()*Math.PI*2,e=Math.random()*1.2+.15,r=850;starPos[i*3]=Math.cos(a)*Math.cos(e)*r;starPos[i*3+1]=Math.sin(e)*r;starPos[i*3+2]=Math.sin(a)*Math.cos(e)*r}
+const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0,depthWrite:false,fog:false}));scene.add(stars);
+
+const ACC=0x10B981;
+const M={
+  white:new THREE.MeshStandardMaterial({color:0xfafafa,roughness:.92}),
+  wall:new THREE.MeshStandardMaterial({color:0xf1f3f6,roughness:.95}),
+  floor:new THREE.MeshStandardMaterial({color:0xe6e8ec,roughness:1}),
+  ground:new THREE.MeshStandardMaterial({color:0xeceef1,roughness:1}),
+  asphalt:new THREE.MeshStandardMaterial({color:0xd4d7dc,roughness:.98}),
+  grey:new THREE.MeshStandardMaterial({color:0xcbd0d8,roughness:.9}),
+  dark:new THREE.MeshStandardMaterial({color:0x3b4453,roughness:.75}),
+  mid:new THREE.MeshStandardMaterial({color:0x8a94a6,roughness:.8}),
+  acc:new THREE.MeshStandardMaterial({color:ACC,roughness:.6}),
+  accGlow:new THREE.MeshStandardMaterial({color:ACC,emissive:ACC,emissiveIntensity:.9,roughness:.5}),
+  glass:new THREE.MeshStandardMaterial({color:0xbfe9ff,roughness:.1,metalness:.1,transparent:true,opacity:.35}),
+  booth:new THREE.MeshStandardMaterial({color:0xd7fbe9,roughness:.2,transparent:true,opacity:.28,side:THREE.DoubleSide}),
+  window:new THREE.MeshStandardMaterial({color:0xcfe9ff,emissive:0xffe0a3,emissiveIntensity:0,roughness:.3}),
+  yellow:new THREE.MeshStandardMaterial({color:0xfbbf24,roughness:.7}),
+  rail:new THREE.MeshStandardMaterial({color:0x6b7280,roughness:.6,metalness:.4}),
+  tyre:new THREE.MeshStandardMaterial({color:0x1f2937,roughness:.95}),
+  copper:new THREE.MeshStandardMaterial({color:0xc2410c,roughness:.5,metalness:.3}),
+  line:new THREE.MeshBasicMaterial({color:ACC,transparent:true,opacity:.55}),
+  lane:new THREE.MeshBasicMaterial({color:0x94a3b8,transparent:true,opacity:.35}),
+  water:new THREE.MeshStandardMaterial({color:0x9fb6c7,roughness:.05,metalness:.2,transparent:true,opacity:0}),
+};
+const CAR_COLORS=[0xffffff,0x1f2937,0x9ca3af,0x10B981,0x0ea5e9,0xef4444,0xf59e0b,0x6366f1];
+
+const _gc=new Map();
+const G=(w,h,d)=>{const k=w+','+h+','+d;let g=_gc.get(k);if(!g){const m=Math.min(w,h,d);g=m<.3?new THREE.BoxGeometry(w,h,d):new RoundedBoxGeometry(w,h,d,2,Math.min(m*.22,.35));_gc.set(k,g)}return g};
+function box(parent,w,h,d,mat,x=0,y=0,z=0,{shadow=true,recv=true}={}){const m=new THREE.Mesh(G(w,h,d),mat);m.position.set(x,y+h/2,z);m.castShadow=shadow;m.receiveShadow=recv;parent.add(m);return m}
+function cyl(parent,rt,rb,h,mat,x=0,y=0,z=0,seg=16){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.position.set(x,y+h/2,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+function sph(parent,r,mat,x,y,z){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
+const lerp=(a,b,t)=>a+(b-a)*t, clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), rnd=(a,b)=>a+Math.random()*(b-a), ease=t=>t<.5?2*t*t:-1+(4-2*t)*t, smooth=t=>t*t*(3-2*t);
+const pickables=[]; // {mesh, data}
+function registerPick(obj,data){obj.traverse(o=>{if(o.isMesh){o.userData.pick=data;pickables.push(o)}});obj.userData.pick=data}
+
+/* ───────────── lights ───────────── */
+const hemi=new THREE.HemisphereLight(0xffffff,0xd8dde6,.9);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,2.1);sun.position.set(-60,110,70);sun.castShadow=true;
+sun.shadow.mapSize.set(Q.shadow,Q.shadow);sun.shadow.radius=isMobile?2:4;const sc=sun.shadow.camera;sc.left=-120;sc.right=120;sc.top=90;sc.bottom=-90;sc.near=10;sc.far=320;sun.shadow.bias=-.0006;sun.shadow.normalBias=.03;scene.add(sun);scene.add(sun.target);
+const fill=new THREE.DirectionalLight(0xdfe8ff,.35);fill.position.set(80,60,-80);scene.add(fill);
+const hallLamps=[];for(const x of[-28,-13,2,16,30]){const l=new THREE.PointLight(0xffe7c2,0,34,1.6);l.position.set(x,6.2,-4);scene.add(l);hallLamps.push(l)}
+const nightKey=new THREE.PointLight(ACC,0,120,1.4);nightKey.position.set(0,14,-4);scene.add(nightKey);
+
+/* ───────────── ground & site ───────────── */
+const world=new THREE.Group();scene.add(world);
+{const cv=document.createElement('canvas');cv.width=cv.height=512;const g=cv.getContext('2d');const rg=g.createRadialGradient(256,256,40,256,256,300);rg.addColorStop(0,'#ffffff');rg.addColorStop(.55,'#f1f2f5');rg.addColorStop(1,'#d9dde4');g.fillStyle=rg;g.fillRect(0,0,512,512);const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;M.ground.map=tx;M.ground.needsUpdate=true}
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),M.ground);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;world.add(ground);
+// site slab
+const slab=box(world,170,.3,96,M.asphalt,4,0,2);slab.receiveShadow=true;
+// wet overlay for monsoon
+const wet=new THREE.Mesh(new THREE.PlaneGeometry(170,96),M.water);wet.rotation.x=-Math.PI/2;wet.position.set(4,.33,2);world.add(wet);
+
+/* ───────────── factory hall (cutaway) ───────────── */
+const HALL={x0:-40,x1:40,z0:-22,z1:14,h:7};
+const hall=new THREE.Group();world.add(hall);
+box(hall,HALL.x1-HALL.x0,.4,HALL.z1-HALL.z0,M.floor,0,.3,(HALL.z0+HALL.z1)/2); // floor
+const wallT=.6;
+box(hall,61.5+wallT,HALL.h,wallT,M.wall,-21+61.5/2,.5,HALL.z0); // back wall right of dock door (-21..40)
+box(hall,13.5+wallT,HALL.h,wallT,M.wall,HALL.x0+13.5/2,.5,HALL.z0); // back wall left of dock door (-40..-26.5)
+box(hall,5.5,2.6,wallT,M.wall,-23.75,4.9,HALL.z0); // dock door lintel
+box(hall,wallT,HALL.h,HALL.z1-HALL.z0,M.wall,HALL.x0,.5,(HALL.z0+HALL.z1)/2);  // left wall
+// right wall with exit door
+box(hall,wallT,HALL.h,(HALL.z1-HALL.z0)/2-3,M.wall,HALL.x1,.5,HALL.z0+((HALL.z1-HALL.z0)/2-3)/2);
+box(hall,wallT,HALL.h,(HALL.z1-HALL.z0)/2-3,M.wall,HALL.x1,.5,HALL.z1-((HALL.z1-HALL.z0)/2-3)/2);
+box(hall,wallT,2.4,6,M.wall,HALL.x1,5.1,0); // lintel over exit
+// low front wall (cutaway) with accent stripe
+box(hall,HALL.x1-HALL.x0,1.2,wallT,M.wall,0,.5,HALL.z1);
+box(hall,HALL.x1-HALL.x0,.14,wallT+.06,M.acc,0,1.7,HALL.z1);
+// back wall windows
+for(let x=HALL.x0+4;x<HALL.x1-2;x+=5){const w=box(hall,3,2,.2,M.window,x,3.6,HALL.z0+.35,{shadow:false});w.userData.win=1}
+// sawtooth roof segments (only over back 40% so interior is visible: the cutaway)
+const roofDepth=(HALL.z1-HALL.z0)*.42;
+for(let x=HALL.x0;x<HALL.x1;x+=10){
+  const r=box(hall,10,.5,roofDepth,M.grey,x+5,HALL.h+.5,HALL.z0+roofDepth/2);
+  const sky=box(hall,10,2.6,.3,M.glass,x+5,HALL.h+1,HALL.z0+roofDepth+.1,{shadow:false});sky.rotation.x=.5;
+  const ridge=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,1),M.grey);
+  const tri=box(hall,10,2.4,roofDepth,M.white,x+5,HALL.h+1.0,HALL.z0+roofDepth/2);tri.scale.z=.02;tri.position.z=HALL.z0+.2;
+}
+// columns along front edge of roof
+for(let x=HALL.x0+5;x<HALL.x1;x+=10){box(hall,.5,HALL.h,.5,M.mid,x,.5,HALL.z0+roofDepth-.3)}
+// roof edge beam
+box(hall,HALL.x1-HALL.x0,.4,.5,M.mid,0,HALL.h+.3,HALL.z0+roofDepth);
+// chimneys
+const stacks=[];
+[[-26,-18],[-19,-18]].forEach(([x,z],i)=>{const h=13+i*2;cyl(hall,1.3,1.5,h,M.white,x,.5,z,18);cyl(hall,1.45,1.45,.8,M.acc,x,h-1.2,z,18);cyl(hall,1.45,1.45,.8,M.acc,x,h-4,z,18);stacks.push(new THREE.Vector3(x,h+.8,z))});
+// zone floor markings + lanes
+function zoneMark(x0,x1,z0,z1){const w=x1-x0,d=z1-z0;const t=.12;[[x0+w/2,z0,w,t],[x0+w/2,z1,w,t],[x0,z0+d/2,t,d],[x1,z0+d/2,t,d]].forEach(([x,z,sw,sd])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(sw,sd),M.lane);m.rotation.x=-Math.PI/2;m.position.set(x,.72,z);hall.add(m)})}
+zoneMark(-38,-23,-17,5);zoneMark(-21,-6,-17,5);zoneMark(-4,8,-17,5);zoneMark(10,22,-17,5);zoneMark(24,38,-17,5);
+// cart lane stripes
+function lane(x0,z0,x1,z1){const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz);const m=new THREE.Mesh(new THREE.PlaneGeometry(len,.9),M.lane);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(dz,dx);m.position.set((x0+x1)/2,.71,(z0+z1)/2);world.add(m);
+  const l2=new THREE.Mesh(new THREE.PlaneGeometry(len,.08),M.line);l2.rotation.copy(m.rotation);l2.position.copy(m.position);l2.position.y=.73;world.add(l2)}
+
+/* ───────────── office block ───────────── */
+const office=new THREE.Group();world.add(office);
+{const ox=-56,oz=0;box(office,14,9.5,20,M.white,ox,.3,oz);box(office,14.6,.5,20.6,M.grey,ox,9.8,oz);
+ for(let f=0;f<3;f++)for(let z=-8;z<=8;z+=3.2){const w=box(office,.25,1.6,2.2,M.window,ox+7.05,1.4+f*3,oz+z,{shadow:false});w.userData.win=1;const w2=box(office,.25,1.6,2.2,M.window,ox-7.05,1.4+f*3,oz+z,{shadow:false});w2.userData.win=1}
+ for(let f=0;f<3;f++)for(let x=-5;x<=5;x+=3.3){const w=box(office,2.2,1.6,.25,M.window,ox+x,1.4+f*3,oz+10.05,{shadow:false});w.userData.win=1}
+ box(office,3.5,.2,6,M.acc,ox+8.8,.3,oz+6);box(office,.3,2.6,.3,M.mid,ox+7.5,.3,oz+4);box(office,.3,2.6,.3,M.mid,ox+7.5,.3,oz+8); // entrance canopy
+ box(office,.3,.3,.3,M.acc,ox,10.3,oz-7);cyl(office,.1,.1,4,M.mid,ox,10.3,oz-7);
+ // sky bridge to hall
+ box(office,10,.4,3,M.grey,ox+12,5,oz-2);box(office,10,2.4,.2,M.glass,ox+12,5.4,oz-3.5,{shadow:false});box(office,10,2.4,.2,M.glass,ox+12,5.4,oz-.5,{shadow:false});box(office,10,.3,3,M.white,ox+12,7.8,oz-2);
+ registerPick(office,{kind:'station',id:'office'})}
+
+/* ───────────── rail dock & track ───────────── */
+const RAIL_Z=-32;
+{for(const dz of[-.9,.9]){const r=box(world,200,.18,.2,M.rail,4,.31,RAIL_Z+dz);r.castShadow=false}
+ for(let x=-94;x<102;x+=1.6){box(world,.5,.14,2.4,M.mid,x,.3,RAIL_Z,{shadow:false})}
+ box(world,30,1,4,M.grey,-22,.3,RAIL_Z+4);  // dock platform
+ for(let i=0;i<5;i++){box(world,.6,1.4,.6,M.yellow,-34+i*6,1.3,RAIL_Z+4.4);box(world,.6,1.4,.6,M.yellow,-34+i*6,1.3,RAIL_Z+6.4)}
+ // dock gantry crane
+ box(world,.6,8,.6,M.mid,-36,.3,RAIL_Z+3);box(world,.6,8,.6,M.mid,-36,.3,RAIL_Z+11);box(world,.6,8,.6,M.mid,-8,.3,RAIL_Z+3);box(world,.6,8,.6,M.mid,-8,.3,RAIL_Z+11);
+ box(world,29,.6,.6,M.acc,-22,8.3,RAIL_Z+3);box(world,29,.6,.6,M.acc,-22,8.3,RAIL_Z+11);
+ // covered walkway from dock to hall
+ for(let i=0;i<4;i++)box(world,.3,3,.3,M.mid,-22,.3,RAIL_Z+8+i*2.2);
+}
+// pallet stacks at dock
+for(let i=0;i<6;i++){const g=new THREE.Group();g.position.set(-33+i*4.2,1.3,RAIL_Z+7.5);box(g,2.2,.25,1.6,M.copper,0,0,0);box(g,1.9,1.1,1.3,i%2?M.white:M.acc,0,.25,0);world.add(g)}
+
+/* ───────────── stations ───────────── */
+const CONV_Y=1.25; // top of conveyor
+const stations=[]; const robots=[];
+function addStation(st){stations.push(st);if(st.obj)registerPick(st.obj,{kind:'station',id:st.id});return st}
+
+// main conveyor along z=0 from x=-36 → 40
+const conv=new THREE.Group();hall.add(conv);
+box(conv,76,.5,2.6,M.dark,2,.7,0);
+for(let x=-35;x<40;x+=6)box(conv,.5,.6,3.2,M.mid,x,.7,0);
+const slats=[];for(let x=-36;x<40;x+=1.5){const s=box(conv,1.1,.08,2.3,M.grey,x,1.2,0,{shadow:false});slats.push(s)}
+// side rails
+box(conv,76,.12,.12,M.acc,2,1.3,-1.35);box(conv,76,.12,.12,M.acc,2,1.3,1.35);
+
+// PRESS HALL: three stamping presses north of the line + coil feeder
+{for(let i=0;i<3;i++){const g=new THREE.Group();const x=-35+i*5.2,z=-9;g.position.set(x,.7,z);hall.add(g);
+  box(g,4,1.2,3.6,M.dark,0,0,0);box(g,.5,6.5,.5,M.mid,-1.6,1.2,-1.5);box(g,.5,6.5,.5,M.mid,1.6,1.2,-1.5);box(g,.5,6.5,.5,M.mid,-1.6,1.2,1.5);box(g,.5,6.5,.5,M.mid,1.6,1.2,1.5);
+  box(g,4.2,1.4,3.8,M.white,0,7.7,0);box(g,1.2,.6,1.2,M.acc,0,9.1,0);
+  const ram=box(g,3.2,1.6,2.8,M.mid,0,5,0);const die=box(g,2.6,.3,2,M.acc,0,4.7,0);
+  const sheet=box(g,2.8,.08,2.2,M.grey,0,1.2,0,{shadow:false});
+  const st=addStation({id:'press'+(i+1),name:`Stamping press ${i+1}`,sub:['Door skins','Hood & roof','Floor pan'][i],area:'press',kind:'Press',obj:g,pos:new THREE.Vector3(x,3,z),cycle:[8.5,9.2,11.4][i],phase:Math.random()*10,tonnage:[2400,1800,3200][i],ram,die,sheet,status:'running',count:0})}
+ // stamped panel racks south of presses
+ for(let i=0;i<4;i++){const g=new THREE.Group();g.position.set(-36+i*3.4,.7,-3.2);hall.add(g);box(g,2.4,.15,1.6,M.mid,0,0,0);for(let k=0;k<5;k++){const pnl=box(g,.12,1.6,1.4,M.grey,-.9+k*.45,.15,0);pnl.rotation.z=.12}}
+ // coil feeder
+ {const g=new THREE.Group();g.position.set(-36,.7,-15);hall.add(g);const coil=new THREE.Mesh(new THREE.TorusGeometry(1.6,.7,10,24),M.rail);coil.position.y=2.2;coil.castShadow=true;g.add(coil);box(g,1,2,4.4,M.dark,0,0,0);
+  for(let i=1;i<4;i++){const c=new THREE.Mesh(new THREE.TorusGeometry(1.5,.6,10,24),M.rail);c.position.set(i*3.6,2.1,0);c.castShadow=true;g.add(c)}}}
+
+// BODY SHOP: 6 welding robots
+function robotArm(x,z,facing){const g=new THREE.Group();g.position.set(x,.7,z);g.rotation.y=facing;hall.add(g);
+  box(g,1.6,.5,1.6,M.dark,0,0,0);const turret=new THREE.Group();turret.position.y=.5;g.add(turret);cyl(turret,.6,.7,.7,M.white,0,0,0);
+  const shoulder=new THREE.Group();shoulder.position.y=.9;turret.add(shoulder);box(shoulder,.6,3,.6,M.acc,0,0,0);sph(shoulder,.42,M.white,0,0,0);
+  const elbow=new THREE.Group();elbow.position.y=3;shoulder.add(elbow);sph(elbow,.4,M.white,0,0,0);const fore=box(elbow,2.8,.45,.45,M.white,1.4,-.22,0);
+  const wrist=new THREE.Group();wrist.position.set(2.8,0,0);elbow.add(wrist);box(wrist,.5,.6,.5,M.dark,0,-.3,0);const tip=cyl(wrist,.06,.1,.9,M.copper,0,-1.1,0);
+  const tipPos=new THREE.Object3D();tipPos.position.set(0,-1.2,0);wrist.add(tipPos);
+  return {g,turret,shoulder,elbow,wrist,tipPos}}
+{const names=['R-01','R-02','R-03','R-04','R-05','R-06'];
+ for(let i=0;i<6;i++){const x=-18+(i%3)*4.6,z=i<3?-3.2:3.2;const r=robotArm(x,z,i<3?Math.PI/2:-Math.PI/2);r.phase=i*1.1;r.id=names[i];
+  const st=addStation({id:'rob'+i,name:`Weld robot ${names[i]}`,sub:['Underbody','Side frame','Roof bow','Underbody','Side frame','Roof bow'][i],area:'body',kind:'Robot',obj:r.g,pos:new THREE.Vector3(x,3.5,z),cycle:46+i*2,phase:r.phase,status:'running',count:0,robot:r,welds:0});r.st=st;robots.push(r)}
+ // body-shop fixture frame
+ box(hall,13,.3,.3,M.mid,-13.4,6.4,-1.6);box(hall,13,.3,.3,M.mid,-13.4,6.4,1.6);for(const x of[-19.6,-7.2]){box(hall,.3,6,.3,M.mid,x,.7,-1.6);box(hall,.3,6,.3,M.mid,x,.7,1.6)}}
+
+// PAINT SHOP: translucent booth with two gantry sprayers
+const paintBots=[];
+{const bx=2,bz=0;const booth=new THREE.Group();hall.add(booth);
+ box(booth,11,5.5,9,M.booth,bx,.7,bz,{shadow:false});box(booth,11.4,.4,9.4,M.booth,bx,6.2,bz,{shadow:false});box(booth,.4,5.5,9,M.white,bx-5.5,.7,bz);box(booth,.4,5.5,9,M.white,bx+5.5,.7,bz);
+ for(let i=0;i<3;i++)cyl(booth,.6,.6,1.6,M.mid,bx-3+i*3,6.6,bz-2,14);
+ for(const z of[-2.4,2.4]){const g=new THREE.Group();g.position.set(bx,5.6,z);hall.add(g);box(g,8,.3,.3,M.rail,0,0,0);const car=new THREE.Group();g.add(car);box(car,.7,.5,.7,M.dark,0,-.1,0);const arm=box(car,.25,2.6,.25,M.white,0,-2.7,0);const head=box(car,.9,.3,.5,M.acc,0,-2.9,z<0?.4:-.4);paintBots.push({g,car,head,z})}
+ const st=addStation({id:'paint',name:'Paint shop',sub:'E-coat · base · clear',area:'paint',kind:'Booth',obj:booth,pos:new THREE.Vector3(bx,3,bz),cycle:84,phase:0,status:'running',count:0,temp:22.4,humidity:61,booth:true})}
+
+// BATTERY LINE: gantry crane that lowers packs; pack buffer
+const battery={};
+{const x=16;const g=new THREE.Group();hall.add(g);
+ for(const [dx,dz] of[[-4,-3],[4,-3],[-4,3],[4,3]])box(g,.5,7,.5,M.mid,x+dx,.7,dz);
+ box(g,9,.5,.5,M.mid,x,7.7,-3);box(g,9,.5,.5,M.mid,x,7.7,3);
+ const bridge=new THREE.Group();bridge.position.set(x,7.9,0);g.add(bridge);box(bridge,.6,.6,7,M.acc,0,0,0);
+ const hoist=new THREE.Group();bridge.add(hoist);box(hoist,1.2,.8,1.2,M.dark,0,.3,0);
+ const cable=box(hoist,.08,5,.08,M.dark,0,-5,0,{shadow:false});const cable2=box(hoist,.08,5,.08,M.dark,.5,-5,0,{shadow:false});
+ const pack=box(hoist,3.2,.5,1.9,M.accGlow,0,-5.2,0);pack.visible=false;
+ battery.bridge=bridge;battery.hoist=hoist;battery.pack=pack;battery.cables=[cable,cable2];battery.x=x;
+ // pack buffer rack (north)
+ for(let i=0;i<4;i++){const p=box(g,3.2,.5,1.9,M.accGlow,x-5+i*3.4,.9,-6.5);box(g,3.4,.2,2.1,M.mid,x-5+i*3.4,.7,-6.5)}
+ // cell formation racks
+ for(let i=0;i<3;i++){const rk=new THREE.Group();rk.position.set(x-4+i*4,.7,-13);g.add(rk);box(rk,3,4.5,1.4,M.white,0,0,0);for(let r=0;r<4;r++)for(let c=0;c<4;c++)box(rk,.5,.5,.2,M.acc,-1.05+c*.7,.5+r*1,.75,{shadow:false})}
+ const st=addStation({id:'battery',name:'Battery pack drop',sub:'Structural pack · 400V',area:'battery',kind:'Gantry',obj:g,pos:new THREE.Vector3(x,4,0),cycle:72,phase:0,status:'running',count:0,packs:4})}
+
+// FINAL ASSEMBLY: wheel fit + trim robots + end-of-line scanner
+const asm={};
+{const x=30;const g=new THREE.Group();hall.add(g);
+ for(const dz of[-3,3]){const wr=new THREE.Group();wr.position.set(x,.7,dz);g.add(wr);box(wr,1.6,.5,1.6,M.dark,0,0,0);const post=box(wr,.5,2.2,.5,M.white,0,.5,0);const arm=box(wr,.4,.4,2.4,M.acc,0,2.4,dz<0?1.2:-1.2);const hand=box(wr,.9,.9,.3,M.dark,0,2.1,dz<0?2.4:-2.4);wr.userData.dz=dz;(asm.wheelBots??=[]).push(wr)}
+ // tyre racks
+ for(let i=0;i<8;i++){const t=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.3,16),M.tyre);t.rotation.z=Math.PI/2;t.position.set(x-4+i*.5,1.2,-6.5);t.castShadow=true;g.add(t)}
+ box(g,4.6,.2,1,M.mid,x-2.2,.7,-6.5);
+ // trim robots (small)
+ for(const dz of[-2.6,2.6]){const r=robotArm(x-5,dz,dz<0?Math.PI/2:-Math.PI/2);r.g.scale.setScalar(.7);r.phase=dz;r.trim=true;robots.push(r)}
+ // end-of-line scanner gate
+ const gate=new THREE.Group();gate.position.set(37.5,.7,0);g.add(gate);box(gate,.4,4.5,.4,M.white,0,0,-2);box(gate,.4,4.5,.4,M.white,0,0,2);box(gate,.4,.4,4.4,M.white,0,4.3,0);const beam=box(gate,.1,3.2,3.6,M.accGlow,0,.5,0,{shadow:false});beam.material=new THREE.MeshBasicMaterial({color:ACC,transparent:true,opacity:.18});asm.beam=beam;
+ asm.x=x;
+ const st=addStation({id:'assembly',name:'Final assembly',sub:'Wheels · trim · EOL check',area:'assembly',kind:'Line',obj:g,pos:new THREE.Vector3(x,3,0),cycle:68,phase:0,status:'running',count:0,torque:140})}
+
+/* ───────────── outdoors: test track & charging yard ───────────── */
+const TRACK={cx:62,cz:-6,rx:17,rz:12};
+{const shape=new THREE.Shape();shape.absellipse(0,0,TRACK.rx+3,TRACK.rz+3,0,Math.PI*2,false,0);const hole=new THREE.Path();hole.absellipse(0,0,TRACK.rx-3,TRACK.rz-3,0,Math.PI*2,true,0);shape.holes.push(hole);
+ const trk=new THREE.Mesh(new THREE.ShapeGeometry(shape,48),M.dark);trk.rotation.x=-Math.PI/2;trk.position.set(TRACK.cx,.34,TRACK.cz);trk.receiveShadow=true;world.add(trk);
+ const dash=new THREE.Shape();dash.absellipse(0,0,TRACK.rx+.08,TRACK.rz+.08,0,Math.PI*2,false,0);const dh=new THREE.Path();dh.absellipse(0,0,TRACK.rx-.08,TRACK.rz-.08,0,Math.PI*2,true,0);dash.holes.push(dh);
+ const dl=new THREE.Mesh(new THREE.ShapeGeometry(dash,48),M.line);dl.rotation.x=-Math.PI/2;dl.position.set(TRACK.cx,.36,TRACK.cz);world.add(dl);
+ // infield: grass-ish pad + cones + a small timing tower
+ const inf=new THREE.Mesh(new THREE.CircleGeometry(1,32),new THREE.MeshStandardMaterial({color:0xd9f2e6,roughness:1}));inf.scale.set(TRACK.rx-3.2,TRACK.rz-3.2,1);inf.rotation.x=-Math.PI/2;inf.position.set(TRACK.cx,.35,TRACK.cz);inf.receiveShadow=true;world.add(inf);
+ for(let i=0;i<8;i++){const a=i/8*Math.PI*2;cyl(world,.02,.25,.6,M.yellow,TRACK.cx+Math.cos(a)*(TRACK.rx-2.4),.34,TRACK.cz+Math.sin(a)*(TRACK.rz-2.4),8)}
+ const tw=new THREE.Group();tw.position.set(TRACK.cx,.34,TRACK.cz);world.add(tw);box(tw,.4,5,.4,M.mid,-1,0,0);box(tw,.4,5,.4,M.mid,1,0,0);box(tw,3,1.6,2,M.white,0,5,0);box(tw,3.2,.2,2.2,M.acc,0,6.6,0);
+ const st=addStation({id:'track',name:'Test track',sub:'1.2 km handling loop',area:'track',kind:'Track',obj:tw,pos:new THREE.Vector3(TRACK.cx,2,TRACK.cz),cycle:0,phase:0,status:'open',count:0,laps:0})}
+// link road from exit door to track
+{const r=box(world,10,.05,5,M.dark,45,.33,0,{shadow:false});r.receiveShadow=true}
+const YARD={x0:46,z0:18,cols:7,rows:3,dx:3.6,dz:6.5};
+const yardSlots=[];
+{const pad=box(world,YARD.cols*YARD.dx+4,.05,YARD.rows*YARD.dz+3,M.asphalt,YARD.x0+(YARD.cols-1)*YARD.dx/2,.33,YARD.z0+(YARD.rows-1)*YARD.dz/2,{shadow:false});
+ for(let r=0;r<YARD.rows;r++)for(let c=0;c<YARD.cols;c++){const x=YARD.x0+c*YARD.dx,z=YARD.z0+r*YARD.dz;
+  const post=box(world,.5,1.5,.4,M.white,x,.35,z-2.6);box(world,.3,.3,.1,M.accGlow,x,1.2,z-2.4,{shadow:false});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(3,5.4),M.lane);m.rotation.x=-Math.PI/2;m.position.set(x,.39,z);world.add(m);
+  yardSlots.push({x,z,car:null,post})}
+ // canopy with solar panels
+ for(let c=0;c<YARD.cols;c+=3){for(const dz of[-3,YARD.rows*YARD.dz-4])box(world,.4,5,.4,M.mid,YARD.x0+c*YARD.dx+1.8,.35,YARD.z0+dz)}
+ const can=box(world,YARD.cols*YARD.dx+1,.3,YARD.rows*YARD.dz+2,M.white,YARD.x0+(YARD.cols-1)*YARD.dx/2,5.3,YARD.z0+(YARD.rows-1)*YARD.dz/2);
+ for(let c=0;c<YARD.cols;c++)for(let r=0;r<YARD.rows;r++)box(world,3.2,.08,5.6,new THREE.MeshStandardMaterial({color:0x1e3a5f,roughness:.3,metalness:.6}),YARD.x0+c*YARD.dx,5.62,YARD.z0+r*YARD.dz,{shadow:false});
+ const st=addStation({id:'yard',name:'Charging yard',sub:'21 bays · 150 kW DC',area:'track',kind:'Yard',obj:pad,pos:new THREE.Vector3(YARD.x0+10,2,YARD.z0+6),cycle:0,phase:0,status:'open',count:0})}
+// parking lot trees (low poly)
+for(const [x,z] of[[-66,-14],[-66,14],[-44,20],[-30,22],[80,-26],[84,-10],[84,8],[38,26],[-70,28]]){const g=new THREE.Group();g.position.set(x,.3,z);world.add(g);cyl(g,.25,.35,1.6,M.copper,0,0,0,8);const c=new THREE.Mesh(new THREE.IcosahedronGeometry(1.8,1),new THREE.MeshStandardMaterial({color:0x6ee7b7,roughness:1,flatShading:true}));c.position.y=2.8;c.castShadow=true;g.add(c)}
+
+/* ───────────── cars ───────────── */
+const cars=[]; let vinSeq=1;
+const PRIMER=new THREE.MeshStandardMaterial({color:0xb8bec8,roughness:.9});
+function vin(){const s='VLT'+'GF1'+String.fromCharCode(65+Math.floor(Math.random()*26))+(2026).toString().slice(-1)+'C'+String(100000+vinSeq++).slice(1);return s.toUpperCase()}
+function makeCar(){
+  const g=new THREE.Group();const paint=new THREE.MeshStandardMaterial({color:0xb8bec8,roughness:.45,metalness:.15});
+  const body=box(g,4.2,.9,1.9,paint,0,.35,0);const cabin=box(g,2.3,.8,1.7,paint,-.2,1.25,0);
+  const glassF=box(g,.5,.6,1.6,M.glass,1,1.3,0,{shadow:false});glassF.rotation.z=-.5;const glassB=box(g,.4,.6,1.6,M.glass,-1.4,1.3,0,{shadow:false});glassB.rotation.z=.6;
+  const hl=box(g,.1,.25,.5,new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff6d5,emissiveIntensity:0}),2.1,.6,-.6,{shadow:false});const hl2=hl.clone();hl2.position.z=.6;g.add(hl2);
+  const tl=box(g,.1,.2,1.5,new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:.4}),-2.1,.7,0,{shadow:false});
+  const pack=box(g,3.4,.3,1.6,M.accGlow,0,.05,0);pack.visible=false;
+  const wheels=[];for(const [dx,dz] of[[1.35,-.95],[1.35,.95],[-1.35,-.95],[-1.35,.95]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.35,14),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.42,dz);w.castShadow=true;w.visible=false;g.add(w);const hub=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.37,10),M.grey);hub.rotation.x=Math.PI/2;w.add(hub);wheels.push(w)}
+  const c={g,paint,pack,wheels,hl:[hl,hl2],vin:vin(),color:CAR_COLORS[Math.floor(Math.random()*CAR_COLORS.length)],packKWh:[62,75,82,98][Math.floor(Math.random()*4)],stage:0,stageNames:['Stamped','Welded','Painted','Battery in','Assembled','Tested'],x:-36,mode:'line',wait:0,t0:performance.now(),speed:0,path:null,pi:0,lap:0,laps:0,soc:rnd(18,42),slot:null,heading:0,odo:0};
+  g.position.set(c.x,CONV_Y,0);g.rotation.y=0;hall.add(g);registerPick(g,{kind:'car',car:c});cars.push(c);return c}
+const BODY_X0=-20,BODY_X1=-6,PAINT_X0=-3.5,PAINT_X1=7.5,BAT_X=16,ASM_X=30,SCAN_X=37.5,EXIT_X=41;
+function setStage(c,s){if(c.stage>=s)return;c.stage=s;if(s===2)c.paint.color.setHex(c.color);if(s===3)c.pack.visible=true;if(s===4)c.wheels.forEach(w=>w.visible=true);if(s===5){kpi.cars++;kpi.history.push(kpi.cars);addAlert('ok',`${c.vin} passed EOL test`,`lap ${c.laps} · ${c.packKWh} kWh pack`)}}
+
+/* ───────────── autonomous carts ───────────── */
+const carts=[];
+const DOCK=[-23.75,-27];
+const ROUTES=[
+ {name:'AGV-01',pts:[DOCK,[-23.75,-18],[-38.5,-18],[-38.5,8],[-30,8]],haul:'Steel blanks → Press'},
+ {name:'AGV-02',pts:[DOCK,[-23.75,-18],[-38.5,-18],[-38.5,8],[-13,8]],haul:'Sub-frames → Body'},
+ {name:'AGV-03',pts:[DOCK,[-23.75,-18],[16,-18]],haul:'Cell modules → Battery'},
+ {name:'AGV-04',pts:[DOCK,[-23.75,-18],[-38.5,-18],[-38.5,8],[30,8]],haul:'Seats & trim → Assembly'},
+ {name:'AGV-05',pts:[[-38.5,8],[36,8]],haul:'Empty totes shuttle'},
+ {name:'AGV-06',pts:[[-23.75,-18],[30,-18]],haul:'Tyres → Assembly'},
+];
+lane(-38.5,-18,36,-18);lane(-38.5,8,36,8);lane(-38.5,-18,-38.5,8);lane(-23.75,-27,-23.75,-18);
+ROUTES.forEach((r,i)=>{const g=new THREE.Group();world.add(g);box(g,1.8,.5,1.2,M.white,0,.0,0);box(g,1.9,.12,1.3,M.dark,0,-.05,0);const lamp=box(g,.3,.08,1.1,M.accGlow,.8,.5,0,{shadow:false});const load=box(g,1.3,.9,1,i%2?M.copper:M.acc,0,.55,0);
+  const c={id:'cart'+i,name:r.name,haul:r.haul,g,load,pts:r.pts,i:0,dir:1,dwell:rnd(0,2),speed:0,maxSpeed:3.2+i*.15,pos:new THREE.Vector2(...r.pts[0]),vis:new THREE.Vector2(...r.pts[0]),hx:1,hz:0,yield:0,trips:0,soc:rnd(55,98),status:'moving'};g.position.set(c.pos.x,.72,c.pos.y);registerPick(g,{kind:'cart',cart:c});carts.push(c)});
+
+/* ───────────── train ───────────── */
+const train={g:new THREE.Group(),x:-150,state:'approach',t:0,wagons:[],crane:null,speed:0};
+{const g=train.g;world.add(g);const loco=new THREE.Group();g.add(loco);box(loco,7,2.6,2.6,M.acc,0,.6,0);box(loco,3,1.2,2.4,M.dark,-1.5,3.2,0);box(loco,1.6,1,2.2,M.white,2,3.2,0);box(loco,6.6,.3,2.8,M.dark,0,.2,0);for(const dx of[-2.3,0,2.3]){cyl(loco,.5,.5,2.9,M.dark,dx,.3,0,10).rotation.x=Math.PI/2}
+ for(let i=0;i<5;i++){const w=new THREE.Group();w.position.x=-9-i*8;g.add(w);box(w,7.2,.3,2.6,M.dark,0,.6,0);for(const dx of[-2.4,2.4]){cyl(w,.5,.5,2.9,M.dark,dx,.3,0,10).rotation.x=Math.PI/2}const cont=box(w,6.6,2.6,2.5,i%2?M.copper:M.white,0,.9,0);train.wagons.push({g:w,cont,has:true})}
+ const crane=new THREE.Group();crane.position.set(-22,8.9,RAIL_Z+3);world.add(crane);box(crane,1.4,.5,9,M.mid,0,0,4);const trolley=new THREE.Group();crane.add(trolley);box(trolley,1.2,.9,1.2,M.dark,0,-.6,0);const hook=box(trolley,.1,6,.1,M.dark,0,-6.5,0,{shadow:false});const held=box(trolley,6.6,2.6,2.5,M.copper,0,-9.2,0);held.visible=false;train.crane={g:crane,trolley,hook,held}}
+registerPick(train.g,{kind:'station',id:'train'});
+addStation({id:'train',name:'Parts train · IR-7731',sub:'Rail dock · inbound',area:'press',kind:'Rail',obj:null,pos:new THREE.Vector3(-22,3,RAIL_Z),cycle:0,phase:0,status:'moving',count:0});
+
+/* ───────────── particles: sparks, rain, smoke ───────────── */
+const SPARK_N=400;const sparkPos=new Float32Array(SPARK_N*3),sparkVel=[],sparkLife=new Float32Array(SPARK_N);
+const sparkGeo=new THREE.BufferGeometry();sparkGeo.setAttribute('position',new THREE.BufferAttribute(sparkPos,3));
+const sparks=new THREE.Points(sparkGeo,new THREE.PointsMaterial({color:0xfff2a8,size:3,sizeAttenuation:false,transparent:true,opacity:.95,depthWrite:false,blending:THREE.AdditiveBlending}));sparks.frustumCulled=false;scene.add(sparks);
+for(let i=0;i<SPARK_N;i++){sparkVel.push(new THREE.Vector3());sparkLife[i]=0;sparkPos[i*3+1]=-100}
+let sparkCursor=0;const _v=new THREE.Vector3();
+function emitSparks(obj,n){obj.getWorldPosition(_v);for(let k=0;k<n;k++){const i=sparkCursor++%SPARK_N;sparkPos[i*3]=_v.x;sparkPos[i*3+1]=_v.y;sparkPos[i*3+2]=_v.z;sparkVel[i].set(rnd(-3,3),rnd(1,5),rnd(-3,3));sparkLife[i]=rnd(.25,.6)}}
+const weldLights=robots.filter(r=>!r.trim).map(r=>{const l=new THREE.PointLight(0xfff0b0,0,10,2);r.tipPos.add(l);return l});
+
+const RAIN_N=Q.rain;const rainPos=new Float32Array(RAIN_N*3);for(let i=0;i<RAIN_N;i++){rainPos[i*3]=rnd(-80,100);rainPos[i*3+1]=rnd(0,40);rainPos[i*3+2]=rnd(-45,45)}
+const rainGeo=new THREE.BufferGeometry();rainGeo.setAttribute('position',new THREE.BufferAttribute(rainPos,3));
+const rain=new THREE.Points(rainGeo,new THREE.PointsMaterial({color:0x7c8ea3,size:2,sizeAttenuation:false,transparent:true,opacity:.55,depthWrite:false}));rain.visible=false;rain.frustumCulled=false;scene.add(rain);
+
+const smokes=[];stacks.forEach(p=>{for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.7,roughness:1}));m.position.copy(p);m.castShadow=false;scene.add(m);smokes.push({m,o:p,t:i/5,drift:rnd(-.3,.3)})}});
+
+/* ───────────── camera & controls ───────────── */
+const camera=new THREE.OrthographicCamera(-1,1,1,-1,-400,600);
+let composer=null,bloomPass=null;
+function buildComposer(){if(!Q.bloom){composer=null;return}composer=new EffectComposer(renderer);composer.setPixelRatio(Q.dpr);composer.addPass(new RenderPass(scene,camera));bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.32,.55,.86);composer.addPass(bloomPass);composer.addPass(new OutputPass())}
+buildComposer();
+function render(){if(composer)composer.render();else renderer.render(scene,camera)}
+// adaptive quality: drop bloom, then pixel ratio, if frames are slow
+const perf={acc:0,n:0,t:0};function perfSample(dt){perf.acc+=dt;perf.n++;perf.t+=dt;if(perf.t<3)return;const avg=perf.acc/perf.n;perf.acc=0;perf.n=0;perf.t=0;if(avg>.034){if(Q.bloom){Q.bloom=false;composer=null}else if(Q.dpr>1){Q.dpr=1;renderer.setPixelRatio(1)}}}
+const cam={target:new THREE.Vector3(-13,1,0),az:Math.PI/4+.9,el:.42,zoom:9,dTarget:new THREE.Vector3(6,0,-2),dAz:Math.PI/4,dEl:.615,dZoom:44,follow:null,k:.35,idle:0};
+if(reduceMotion){cam.target.set(6,0,-2);cam.az=Math.PI/4;cam.el=.615;cam.zoom=44;cam.k=.0015}
+const AREAS={press:{t:[-29,1,-7],z:15},body:{t:[-13,1,0],z:13},paint:{t:[2,1,0],z:11},battery:{t:[16,1,-3],z:13},assembly:{t:[30,1,0],z:13},track:{t:[62,0,0],z:24},overview:{t:[6,0,-2],z:44}};
+function flyTo(t,z,az){cam.dTarget.set(t[0],t[1],t[2]);cam.dZoom=z;if(az!==undefined)cam.dAz=az;cam.follow=null}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);if(composer){composer.setSize(w,h);bloomPass.resolution.set(w,h)}const a=w/h;camera.left=-cam.zoom*a;camera.right=cam.zoom*a;camera.top=cam.zoom;camera.bottom=-cam.zoom;camera.updateProjectionMatrix();if(w<900&&cam.dZoom===44)cam.dZoom=52}
+addEventListener('resize',resize);
+function updateCamera(dt){const k=1-Math.pow(cam.k,dt);cam.idle+=dt;if(!reduceMotion&&cam.idle>10&&!cam.follow&&cam.dZoom>28)cam.dAz+=dt*.012;
+  if(cam.follow){const o=cam.follow;o.getWorldPosition(_v);cam.dTarget.lerp(_v,Math.min(1,dt*6))}
+  cam.target.lerp(cam.dTarget,k);cam.az=lerp(cam.az,cam.dAz,k);cam.el=lerp(cam.el,cam.dEl,k);const z0=cam.zoom;cam.zoom=lerp(cam.zoom,cam.dZoom,k);
+  if(Math.abs(z0-cam.zoom)>1e-4){const a=innerWidth/innerHeight;camera.left=-cam.zoom*a;camera.right=cam.zoom*a;camera.top=cam.zoom;camera.bottom=-cam.zoom;camera.updateProjectionMatrix()}
+  const d=200;camera.position.set(cam.target.x+Math.cos(cam.az)*Math.cos(cam.el)*d,cam.target.y+Math.sin(cam.el)*d,cam.target.z+Math.sin(cam.az)*Math.cos(cam.el)*d);camera.lookAt(cam.target)}
+// pointer handling
+const ptr={down:false,btn:0,x:0,y:0,sx:0,sy:0,moved:false,pinch:0,touches:new Map()};
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptr.touches.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptr.touches.size===2){const [a,b]=[...ptr.touches.values()];ptr.pinch=Math.hypot(a.x-b.x,a.y-b.y);ptr.pinchZoom=cam.dZoom;ptr.twist=Math.atan2(b.y-a.y,b.x-a.x);ptr.twistAz=cam.dAz;ptr.down=false;return}
+  cam.idle=0;ptr.down=true;ptr.btn=e.button;ptr.x=ptr.sx=e.clientX;ptr.y=ptr.sy=e.clientY;ptr.moved=false;ptr.shift=e.shiftKey||e.ctrlKey;canvas.classList.add('grabbing');closeMenus()});
+canvas.addEventListener('pointermove',e=>{if(ptr.touches.has(e.pointerId))ptr.touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptr.touches.size===2){const [a,b]=[...ptr.touches.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);cam.dZoom=clamp(ptr.pinchZoom*ptr.pinch/d,7,90);const tw=Math.atan2(b.y-a.y,b.x-a.x);let da=tw-ptr.twist;if(da>Math.PI)da-=Math.PI*2;if(da<-Math.PI)da+=Math.PI*2;cam.dAz=ptr.twistAz-da;cam.idle=0;return}
+  if(!ptr.down){hover(e);return}
+  const dx=e.clientX-ptr.x,dy=e.clientY-ptr.y;ptr.x=e.clientX;ptr.y=e.clientY;if(Math.hypot(e.clientX-ptr.sx,e.clientY-ptr.sy)>5)ptr.moved=true;
+  if(ptr.btn===2||ptr.shift){cam.dAz-=dx*.006;cam.dEl=clamp(cam.dEl+dy*.004,.28,1.2)}
+  else{const s=cam.zoom*2/innerHeight;const right=new THREE.Vector3(-Math.sin(cam.az),0,Math.cos(cam.az));const fwd=new THREE.Vector3(-Math.cos(cam.az),0,-Math.sin(cam.az));cam.dTarget.addScaledVector(right,dx*s).addScaledVector(fwd,-dy*s/Math.sin(cam.el));cam.follow=null;if(sel)document.getElementById('dFollow').textContent='Camera free'}});
+function endPtr(e){ptr.touches.delete(e.pointerId);if(ptr.touches.size<2)ptr.pinch=0;if(!ptr.down)return;ptr.down=false;canvas.classList.remove('grabbing');if(!ptr.moved&&e.button===0)pick(e)}
+canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);
+canvas.addEventListener('wheel',e=>{e.preventDefault();cam.idle=0;cam.dZoom=clamp(cam.dZoom*(1+Math.sign(e.deltaY)*.12),7,90)},{passive:false});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function castAt(e){ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(ndc,camera);const h=ray.intersectObjects(pickables,false);return h.length?h[0].object.userData.pick:null}
+const hovEl=document.getElementById('hov');let hoverT=0;
+function hover(e){const now=performance.now();if(now-hoverT<50)return;hoverT=now;const d=castAt(e);canvas.classList.toggle('pick',!!d);
+  if(d&&!isMobile&&!(sel&&selObject(sel)===selObject(d))){hovEl.style.display='block';hovEl.style.left=e.clientX+'px';hovEl.style.top=e.clientY+'px';document.getElementById('hovName').textContent=selName(d)||'';document.getElementById('hovMeta').textContent=d.kind==='car'?d.car.stageNames[d.car.stage]:d.kind==='cart'?d.cart.haul:(stations.find(s=>s.id===d.id)?.kind||'')}else hovEl.style.display='none'}
+canvas.addEventListener('pointerleave',()=>hovEl.style.display='none');
+function pick(e){const d=castAt(e);if(d)select(d);else deselect()}
+
+/* ───────────── selection & detail panel ───────────── */
+let sel=null;const ring=new THREE.Mesh(new THREE.RingGeometry(2.6,3,40),new THREE.MeshBasicMaterial({color:ACC,transparent:true,opacity:.8,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.visible=false;scene.add(ring);
+const ring2=new THREE.Mesh(new THREE.RingGeometry(3.4,3.55,48),new THREE.MeshBasicMaterial({color:ACC,transparent:true,opacity:.35,side:THREE.DoubleSide}));ring2.rotation.x=-Math.PI/2;ring.add(ring2);
+const lblEl=document.getElementById('lbl'),detail=document.getElementById('detail');
+function selObject(d){return d.kind==='car'?d.car.g:d.kind==='cart'?d.cart.g:d.id==='train'?train.g:stations.find(s=>s.id===d.id)?.obj}
+function selName(d){return d.kind==='car'?d.car.vin:d.kind==='cart'?d.cart.name:stations.find(s=>s.id===d.id)?.name}
+function select(d){hovEl.style.display='none';sel=d;const o=selObject(d);if(!o)return;ring.visible=true;lblEl.style.display='flex';
+  const moving=d.kind==='car'||d.kind==='cart'||d.id==='train';cam.follow=moving?o:null;
+  if(!moving){const st=stations.find(s=>s.id===d.id);const p=st?.pos||o.position;cam.dTarget.copy(p);cam.dTarget.y=1}
+  cam.dZoom=Math.min(cam.dZoom,d.kind==='car'?12:16);
+  detail.classList.add('open');document.getElementById('dFollow').textContent=moving?'Camera following':'Camera locked';
+  highlightRow();renderDetail();showToast(`${selName(d)} selected`)}
+function deselect(){sel=null;ring.visible=false;lblEl.style.display='none';detail.classList.remove('open');cam.follow=null;highlightRow()}
+document.getElementById('dClose').onclick=deselect;
+const stat=(k,v)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+function renderDetail(){if(!sel)return;const dn=document.getElementById('dName'),dt=document.getElementById('dType'),ds=document.getElementById('dStatus'),dS=document.getElementById('dStats'),dB=document.getElementById('dBar'),dP=document.getElementById('dPos');
+  if(sel.kind==='car'){const c=sel.car;dn.textContent=c.vin;dt.textContent=`Vehicle · Model V · ${c.packKWh} kWh`;ds.innerHTML=`<span class="status"><i></i>${c.mode==='line'?c.stageNames[c.stage]+(c.wait>0?' · in station':' · on conveyor'):c.mode==='track'?'Test lap '+(c.lap+1):c.mode==='toYard'?'To charging yard':c.mode==='parked'?'Charging':'Shipping'}</span>`;
+    dS.innerHTML=stat('Stage',`${c.stage+1}/6`)+stat('Colour',colorName(c.color))+stat('Pack',`${c.packKWh} kWh`)+stat('SoC',`${c.soc.toFixed(0)} %`)+stat('Speed',`${(c.speed*3.6).toFixed(0)} km/h`)+stat('Elapsed',fmtT((performance.now()-c.t0)/1000));
+    dB.innerHTML=`<div class="bar"><i style="width:${(c.stage+1)/6*100}%"></i></div>`;dP.textContent=`x ${c.g.position.x.toFixed(1)} · z ${c.g.position.z.toFixed(1)}`}
+  else if(sel.kind==='cart'){const c=sel.cart;dn.textContent=c.name;dt.textContent='Autonomous cart · 400 kg payload';ds.innerHTML=`<span class="status ${c.status==='yielding'?'warn':''}"><i></i>${c.status}</span>`;
+    dS.innerHTML=stat('Haul',c.haul)+stat('Speed',`${(c.speed*3.6).toFixed(1)} km/h`)+stat('Battery',`${c.soc.toFixed(0)} %`)+stat('Trips today',c.trips)+stat('Waypoint',`${c.i+1}/${c.pts.length}`)+stat('Yields',c.yield);dB.innerHTML=`<div class="bar"><i style="width:${c.soc}%"></i></div>`;dP.textContent=`x ${c.pos.x.toFixed(1)} · z ${c.pos.y.toFixed(1)}`}
+  else{const s=stations.find(x=>x.id===sel.id);if(!s)return;dn.textContent=s.name;dt.textContent=`${s.kind} · ${s.sub||''}`;const up=s.uptime??97.4;ds.innerHTML=`<span class="status ${s.status==='fault'?'bad':s.status==='idle'?'warn':''}"><i></i>${s.status}</span>`;
+    let extra='';if(s.tonnage)extra=stat('Tonnage',`${s.tonnage} t`)+stat('Strokes',s.count);else if(s.robot)extra=stat('Welds',s.welds)+stat('Tip temp',`${(640+Math.sin(performance.now()/900)*20).toFixed(0)} °C`);else if(s.booth)extra=stat('Booth temp',`${s.temp.toFixed(1)} °C`)+stat('Humidity',`${s.humidity} %`);else if(s.id==='battery')extra=stat('Packs fitted',s.count)+stat('Buffer',`${s.packs} packs`);else if(s.id==='assembly')extra=stat('Wheel torque',`${s.torque} Nm`)+stat('Completed',s.count);else if(s.id==='track')extra=stat('Laps today',s.laps)+stat('Surface',WX.name==='Clear'?'Dry':WX.name==='Heatwave'?'Hot · 52 °C':'Wet');else if(s.id==='yard')extra=stat('Occupied',`${yardSlots.filter(y=>y.car).length}/21`)+stat('Load',`${(yardSlots.filter(y=>y.car).length*0.15*0.8).toFixed(1)} MW`);else if(s.id==='train')extra=stat('Position',`x ${train.x.toFixed(0)}`)+stat('Wagons left',train.wagons.filter(w=>w.has).length);else if(s.id==='office')extra=stat('Headcount',412)+stat('Shift','B · 14:00–22:00');
+    dS.innerHTML=(s.cycle?stat('Cycle time',`${s.cycle.toFixed(1)} s`):'')+stat('Uptime',`${up.toFixed(1)} %`)+extra;dB.innerHTML=`<div class="bar"><i style="width:${up}%"></i></div>`;dP.textContent=''}}
+function colorName(h){return{0xffffff:'Pearl white',0x1f2937:'Graphite',0x9ca3af:'Silver',0x10B981:'Volt green',0x0ea5e9:'Sky blue',0xef4444:'Signal red',0xf59e0b:'Amber',0x6366f1:'Indigo'}[h]||'—'}
+function fmtT(s){s=Math.floor(s);return s<60?s+'s':Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s'}
+
+/* ───────────── dashboard data ───────────── */
+const kpi={cars:0,target:412,takt:68.4,fpy:97.2,rework:3,history:[],taktH:[],fpyH:[]};
+for(let i=0;i<30;i++){kpi.taktH.push(68+rnd(-2,2));kpi.fpyH.push(97+rnd(-1,.8))}
+const alerts=[];const alBox=document.getElementById('alerts');
+function addAlert(level,title,msg,target){alerts.unshift({level,title,msg,target,t:new Date()});if(alerts.length>12)alerts.pop();renderAlerts();if(level!=='ok')showToast(title)}
+function renderAlerts(){document.getElementById('alCount').textContent=alerts.filter(a=>a.level!=='ok').length;alBox.innerHTML=alerts.map((a,i)=>`<div class="al ${a.level}" data-i="${i}"><i></i><div><b>${a.title}</b><span>${a.msg}</span></div><small>${a.t.toTimeString().slice(0,5)}</small></div>`).join('')||'<div class="al"><span>No alerts</span></div>'}
+alBox.onclick=e=>{const el=e.target.closest('.al');if(!el)return;const a=alerts[+el.dataset.i];if(a?.target)select(a.target);alBox.classList.remove('open')}
+function spark(id,arr){const el=document.getElementById(id);if(!el||arr.length<2)return;const a=arr.slice(-30);const mn=Math.min(...a),mx=Math.max(...a),r=mx-mn||1;const pts=a.map((v,i)=>[i/(a.length-1)*140,26-(v-mn)/r*22]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');el.innerHTML=`<path class="area" d="${d} L140 28 L0 28Z"/><path d="${d}"/>`}
+function updateKPIs(){const h=new Date().getHours()+new Date().getMinutes()/60;const pace=Math.round(kpi.target*(h/24));const d=kpi.cars-pace;const kd=document.getElementById('kCarsD');kd.textContent=(d>=0?'+':'')+d+' vs pace';kd.className=d<0?'neg':'';
+  document.getElementById('kTakt').innerHTML=`${kpi.takt.toFixed(1)}<small>s</small>`;const td=document.getElementById('kTaktD');td.textContent=(kpi.takt-70>=0?'+':'−')+Math.abs(kpi.takt-70).toFixed(1)+'s';td.className=kpi.takt>70?'neg':'';
+  document.getElementById('kFpy').innerHTML=`${kpi.fpy.toFixed(1)}<small>%</small>`;document.getElementById('kFpyD').textContent=kpi.rework;spark('sp1',kpi.history.length>1?kpi.history:[0,0]);spark('sp2',kpi.taktH);spark('sp3',kpi.fpyH)}
+// table
+let tab='stations';const thead=document.getElementById('thead'),tbody=document.getElementById('tbody');
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));tab=b.dataset.tab;renderTable()});
+const chip=s=>`<span class="chip ${s==='running'||s==='moving'||s==='open'||s==='ok'?'':s==='fault'?'bad':s==='idle'||s==='parked'?'idle':'warn'}">${s}</span>`;
+function renderTable(){let rows='';if(tab==='stations'){thead.innerHTML='<tr><th>Station</th><th>Area</th><th>Cycle</th><th>Count</th><th>Status</th></tr>';rows=stations.map(s=>`<tr class="row" data-k="station" data-id="${s.id}"><td><b>${s.name}</b></td><td>${s.area}</td><td class="m">${s.cycle?s.cycle.toFixed(1)+' s':'—'}</td><td class="m">${s.count}</td><td>${chip(s.status)}</td></tr>`).join('');document.getElementById('tblMeta').textContent=`${stations.filter(s=>s.status==='running').length} running`}
+  else if(tab==='carts'){thead.innerHTML='<tr><th>Cart</th><th>Haul</th><th>Speed</th><th>SoC</th><th>Status</th></tr>';rows=carts.map(c=>`<tr class="row" data-k="cart" data-id="${c.id}"><td><b>${c.name}</b></td><td>${c.haul}</td><td class="m">${(c.speed*3.6).toFixed(1)} km/h</td><td class="m">${c.soc.toFixed(0)}%</td><td>${chip(c.status)}</td></tr>`).join('');document.getElementById('tblMeta').textContent=`${carts.length} active`}
+  else{thead.innerHTML='<tr><th>VIN</th><th>Stage</th><th>Pack</th><th>Colour</th><th>Status</th></tr>';rows=cars.slice().reverse().map(c=>`<tr class="row" data-k="car" data-id="${c.vin}"><td class="m">${c.vin}</td><td>${c.stageNames[c.stage]}</td><td class="m">${c.packKWh} kWh</td><td>${colorName(c.color)}</td><td>${chip(c.mode==='line'?'building':c.mode==='track'?'testing':c.mode==='parked'?'charging':c.mode)}</td></tr>`).join('');document.getElementById('tblMeta').textContent=`${cars.length} on site`}
+  tbody.innerHTML=rows;highlightRow()}
+function highlightRow(){tbody.querySelectorAll('tr').forEach(tr=>{const k=tr.dataset.k,id=tr.dataset.id;const on=sel&&((k==='station'&&sel.kind==='station'&&sel.id===id)||(k==='cart'&&sel.kind==='cart'&&sel.cart.id===id)||(k==='car'&&sel.kind==='car'&&sel.car.vin===id));tr.classList.toggle('sel',!!on)})}
+tbody.onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;const {k,id}=tr.dataset;if(k==='station')select({kind:'station',id});else if(k==='cart')select({kind:'cart',cart:carts.find(c=>c.id===id)});else select({kind:'car',car:cars.find(c=>c.vin===id)})};
+// search
+const q=document.getElementById('q'),qres=document.getElementById('qres');
+q.oninput=()=>{const v=q.value.trim().toLowerCase();if(!v){qres.classList.remove('open');return}const out=[];stations.forEach(s=>{if(s.name.toLowerCase().includes(v)||s.area.includes(v))out.push({l:s.name,m:s.kind,d:{kind:'station',id:s.id}})});carts.forEach(c=>{if(c.name.toLowerCase().includes(v)||c.haul.toLowerCase().includes(v))out.push({l:c.name,m:'Cart',d:{kind:'cart',cart:c}})});cars.forEach(c=>{if(c.vin.toLowerCase().includes(v))out.push({l:c.vin,m:c.stageNames[c.stage],d:{kind:'car',car:c}})});
+  qres.innerHTML=out.slice(0,8).map((o,i)=>`<button data-i="${i}">${o.l}<span>${o.m}</span></button>`).join('')||'<button>No matches</button>';qres._out=out;qres.classList.add('open')};
+qres.onclick=e=>{const b=e.target.closest('button');if(!b||b.dataset.i===undefined)return;select(qres._out[+b.dataset.i].d);qres.classList.remove('open');q.value='';q.blur()};
+q.onkeydown=e=>{if(e.key==='Enter'&&qres._out?.length){select(qres._out[0].d);qres.classList.remove('open');q.value='';q.blur()}if(e.key==='Escape'){qres.classList.remove('open');q.blur()}};
+// area switcher
+document.querySelectorAll('#areas button,#areasMob button').forEach(b=>b.onclick=()=>{const key=b.dataset.area,a=AREAS[key];deselect();flyTo(a.t,a.z,Math.PI/4);cam.idle=0;document.querySelectorAll('#areas button,#areasMob button').forEach(x=>x.classList.toggle('on',x.dataset.area===key));showToast(`Flying to ${b.textContent}`);b.scrollIntoView?.({inline:'center',block:'nearest',behavior:'smooth'})});
+addEventListener('keydown',e=>{if(e.key==='Escape'){deselect();closeMenus()}if(e.key==='0'&&document.activeElement!==q){flyTo(AREAS.overview.t,AREAS.overview.z,Math.PI/4);document.querySelectorAll('#areas button').forEach(x=>x.classList.remove('on'))}});
+// menus
+function closeMenus(){document.querySelectorAll('.menu,#alerts').forEach(m=>m.classList.remove('open'));qres.classList.remove('open')}
+document.getElementById('wxBtn').onclick=e=>{e.stopPropagation();const m=document.getElementById('wxMenu');const o=m.classList.contains('open');closeMenus();m.classList.toggle('open',!o)};
+document.getElementById('alBtn').onclick=e=>{e.stopPropagation();const o=alBox.classList.contains('open');closeMenus();alBox.classList.toggle('open',!o)};
+document.addEventListener('click',e=>{if(!e.target.closest('.menu,#alerts,#wxBtn,#alBtn,.search'))closeMenus()});
+// toast
+let toastT;function showToast(m){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+// mobile tabs
+document.querySelectorAll('.mob-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mob-tabs button').forEach(x=>x.classList.toggle('on',x===b));document.getElementById('tracker').classList.toggle('mob-on',b.dataset.mob==='tracker');document.getElementById('table').classList.toggle('mob-on',b.dataset.mob==='table');if(b.dataset.mob!=='none')deselect()});
+// clock
+setInterval(()=>{document.getElementById('clockTxt').textContent=new Date().toTimeString().slice(0,8)},250);
+
+/* ───────────── weather & day/night ───────────── */
+const WXS={clear:{name:'Clear',icon:'☀️',temp:31,fog:[260,520],sky:0xf3f4f6,sun:2.1,hemi:.9,trackMul:1,wet:0,rain:false,cls:''},
+ monsoon:{name:'Monsoon',icon:'🌧️',temp:26,fog:[140,380],sky:0xd3d9e2,sun:.9,hemi:.7,trackMul:.62,wet:.55,rain:true,cls:'rain'},
+ fog:{name:'Winter fog',icon:'🌫️',temp:9,fog:[60,200],sky:0xe6eaf0,sun:1.0,hemi:1.0,trackMul:.5,wet:.15,rain:false,cls:'fog'},
+ heat:{name:'Heatwave',icon:'🔥',temp:44,fog:[220,480],sky:0xf7efe3,sun:2.6,hemi:.95,trackMul:.85,wet:0,rain:false,cls:'heat'}};
+let WX=WXS.clear,night=false,nightT=0,autoCycle=!reduceMotion,dayPhase=.03,flash=0;const DAY_LEN=480;
+function setWeather(k){WX=WXS[k];document.getElementById('wxIcon').textContent=WX.icon;document.getElementById('wxName').textContent=WX.name;document.getElementById('wxTemp').textContent=WX.temp+'°C';document.querySelectorAll('#wxMenu button').forEach(b=>b.classList.toggle('on',b.dataset.wx===k));
+  const wx=document.getElementById('wx');wx.className=WX.cls;rain.visible=WX.rain;closeMenus();stations.find(s=>s.id==='track').status=WX.trackMul<.7?'caution':'open';
+  if(k!=='clear')addAlert('warn',`${WX.name} on site`,WX.trackMul<.7?'Test track speed limited, yard load shed 10 %':'Outdoor ops nominal',{kind:'station',id:'track'});renderTable()}
+document.querySelectorAll('#wxMenu button').forEach(b=>b.onclick=()=>setWeather(b.dataset.wx));
+const autoChip=document.getElementById('autoChip');
+document.getElementById('night').onclick=()=>{if(autoCycle){autoCycle=false;night=nightT<.5}else if(night){night=false}else{night=true}autoChip.classList.toggle('on',autoCycle);showToast(night?'Night shift lighting':'Day shift lighting')};
+document.getElementById('night').ondblclick=()=>{autoCycle=true;autoChip.classList.add('on');showToast('Automatic day/night')};
+const _skyTop=new THREE.Color(),_skyHor=new THREE.Color(),_sunCol=new THREE.Color();
+const winMats=[M.window];
+function updateEnv(dt){
+  if(autoCycle){dayPhase=(dayPhase+dt/DAY_LEN)%1}
+  const target=autoCycle?smooth(clamp((-Math.cos(dayPhase*Math.PI*2)-.15)/.5,0,1)):(night?1:0);
+  nightT=lerp(nightT,target,1-Math.pow(autoCycle?.3:.02,dt));
+  const isNight=nightT>.5;if((document.documentElement.dataset.night==='1')!==isNight)document.documentElement.dataset.night=isNight?'1':'';
+  const sa=autoCycle?dayPhase*Math.PI*2:(night?Math.PI:0);const el=Math.max(.12,Math.cos(sa)*.95+.1);
+  sun.position.set(Math.sin(sa)*120-30,el*130+10,Math.cos(sa)*80+40);skyMat.uniforms.sunDir.value.copy(sun.position).normalize();
+  const sky=new THREE.Color(WX.sky).lerp(NIGHT_SKY,nightT);scene.fog.color.copy(sky);
+  const dusk=clamp(1-Math.abs(nightT-.5)*2,0,1);
+  _skyTop.setHex(WX===WXS.heat?0xf1d9b4:0xd6dfeb).lerp(new THREE.Color(0x070b16),nightT).lerp(new THREE.Color(0x8aa0c8),dusk*.25);
+  _skyHor.setHex(WX.sky).lerp(new THREE.Color(0x141c33),nightT).lerp(new THREE.Color(0xf7c6a0),dusk*.55*(WX===WXS.clear||WX===WXS.heat?1:.3));
+  skyMat.uniforms.top.value.copy(_skyTop);skyMat.uniforms.hor.value.copy(_skyHor);skyMat.uniforms.glow.value=lerp(WX===WXS.fog?.08:.4,.05,nightT)+dusk*.5;_sunCol.setHex(0xfff1d6).lerp(new THREE.Color(0xff9a5c),dusk);skyMat.uniforms.sunCol.value.copy(_sunCol);
+  stars.material.opacity=Math.max(0,nightT-.55)*2.2*(WX===WXS.clear||WX===WXS.heat?1:.15);
+  if(WX===WXS.monsoon){if(flash>0)flash-=dt*5;else if(Math.random()<dt*.08)flash=1;}else flash=0;
+  const fl=Math.max(0,flash);document.getElementById('wx').style.filter=fl>0?`brightness(${1+fl*.8})`:'';scene.fog.near=lerp(WX.fog[0],WX.fog[0]*.8,nightT);scene.fog.far=WX.fog[1];
+  sun.intensity=lerp(WX.sun*(0.55+el*.5),.06,nightT)+fl*3;M.ground.color.setHex(0xeceef1).lerp(new THREE.Color(0x2a3140),nightT);M.asphalt.color.setHex(0xd4d7dc).lerp(new THREE.Color(0x343b4a),nightT);M.floor.color.setHex(0xe6e8ec).lerp(new THREE.Color(0x3a4252),nightT);M.wall.color.setHex(0xf1f3f6).lerp(new THREE.Color(0x4b5567),nightT);M.white.color.setHex(0xfafafa).lerp(new THREE.Color(0x5b6578),nightT);M.grey.color.setHex(0xcbd0d8).lerp(new THREE.Color(0x3f4756),nightT);sun.color.setHex(WX===WXS.heat?0xffe2b8:0xffffff).lerp(new THREE.Color(0x8fa3ff),nightT);hemi.intensity=lerp(WX.hemi,.32,nightT)+fl*1.2;hemi.color.setHex(0xffffff).lerp(new THREE.Color(0x6b7fd1),nightT);fill.intensity=lerp(.35,.1,nightT);
+  nightKey.intensity=nightT*160;hallLamps.forEach(l=>l.intensity=nightT*140);nightKey.color.setHex(0xbfd4ff);M.window.emissiveIntensity=nightT*1.6;M.accGlow.emissiveIntensity=lerp(.9,2.2,nightT);M.water.opacity=lerp(M.water.opacity,WX.wet,dt*2);renderer.toneMappingExposure=lerp(1.05,.8,nightT);
+  cars.forEach(c=>{const on=nightT>.45&&(c.mode==='track'||c.mode==='toYard');c.hl.forEach(h=>h.material.emissiveIntensity=on?3:0);if(on&&!c.lamp&&cars.filter(x=>x.lamp).length<2){c.lamp=new THREE.PointLight(0xfff3d0,60,14,1.8);c.lamp.position.set(2.6,.6,0);c.g.add(c.lamp)}else if(!on&&c.lamp){c.g.remove(c.lamp);c.lamp=null}});
+  // rain
+  if(rain.visible){const p=rainPos;for(let i=0;i<RAIN_N;i++){p[i*3+1]-=dt*28;if(p[i*3+1]<0){p[i*3+1]=40;p[i*3]=rnd(-80,100);p[i*3+2]=rnd(-45,45)}}rainGeo.attributes.position.needsUpdate=true}}
+
+/* ───────────── simulation ───────────── */
+let simT=0,spawnT=0,lastCar=null;const CONV_SPEED=1.6;const trackerCar=()=>sel?.kind==='car'?sel.car:cars.find(c=>c.mode==='line'&&c.x>-20)||cars[0];
+function nearestLineCar(x,range){let best=null,bd=range;for(const c of cars){if(c.mode!=='line')continue;const d=Math.abs(c.x-x);if(d<bd){bd=d;best=c}}return best}
+function updateStations(dt){
+  // presses
+  stations.forEach(s=>{if(s.ram){const t=((simT+s.phase)%s.cycle)/s.cycle;const k=t<.3?smooth(t/.3):t<.45?1:1-smooth((t-.45)/.55);s.ram.position.y=5.8-k*3.2;s.die.position.y=4.85-k*3.2;s.sheet.scale.y=1+k*6;if(t<.02&&!s._hit){s._hit=1;s.count++}if(t>.5)s._hit=0}});
+  // weld robots
+  robots.forEach((r,i)=>{const c=r.trim?nearestLineCar(ASM_X-5,4):nearestLineCar(r.g.position.x,3.2);const active=!!c;const t=simT*1.7+r.phase;
+    if(active){r.turret.rotation.y=Math.sin(t*.9)*.5;r.shoulder.rotation.z=-.5+Math.sin(t)*.35;r.elbow.rotation.z=1.2+Math.cos(t*1.3)*.5;r.wrist.rotation.z=Math.sin(t*2)*.4;
+      if(!r.trim){const burst=Math.sin(t*6)>.3;if(burst){emitSparks(r.tipPos,2);if(Math.random()<.05)r.st.welds++}const li=weldLights[robots.indexOf(r)];if(li)li.intensity=burst?12:0}}
+    else{r.turret.rotation.y=lerp(r.turret.rotation.y,0,dt*2);r.shoulder.rotation.z=lerp(r.shoulder.rotation.z,-.2,dt*2);r.elbow.rotation.z=lerp(r.elbow.rotation.z,1.6,dt*2);const li=weldLights[robots.indexOf(r)];if(li)li.intensity=0}
+    if(r.st)r.st.status=active?'running':'idle'});
+  // paint bots
+  const pc=nearestLineCar(2,5.5);paintBots.forEach((p,i)=>{if(pc){p.car.position.x=Math.sin(simT*1.4+i*Math.PI)*3.4;p.head.rotation.x=Math.sin(simT*5)*.2;p.car.position.y=Math.sin(simT*2.8+i)*.6-.3}else p.car.position.x=lerp(p.car.position.x,0,dt)});
+  const ps=stations.find(s=>s.booth);ps.status=pc?'running':'idle';ps.temp=22.4+Math.sin(simT*.1)*.4;
+  // scanner beam pulse
+  asm.beam.material.opacity=.12+Math.sin(simT*4)*.08;
+  // smoke
+  smokes.forEach(s=>{s.t+=dt*.16;if(s.t>1){s.t=0}const y=s.t*9;s.m.position.set(s.o.x+s.t*3*s.drift+Math.sin(s.t*6)*.3,s.o.y+y,s.o.z-s.t*2.5);const sc=.5+s.t*2.2;s.m.scale.setScalar(sc);s.m.material.opacity=(1-s.t)*.55*(1-nightT*.4)});
+}
+function updateCars(dt){
+  const trackMul=WX.trackMul;
+  spawnT-=dt;const lineCars=cars.filter(c=>c.mode==='line');const last=lineCars[lineCars.length-1];
+  if(spawnT<=0&&(!last||last.x>-24)){makeCar();spawnT=18+rnd(0,6)}
+  for(const c of cars){
+    if(c.mode==='line'){
+      const ahead=cars.find(o=>o!==c&&o.mode==='line'&&o.x>c.x&&o.x-c.x<6.2);
+      if(c.wait>0){c.wait-=dt;c.speed=0}
+      else if(ahead){c.speed=0}
+      else{c.speed=CONV_SPEED;c.x+=CONV_SPEED*dt}
+      c.g.position.x=c.x;
+      if(c.x>BODY_X1&&c.stage<1)setStage(c,1);
+      if(c.x>PAINT_X0+5.5&&c.stage<2)setStage(c,2);
+      if(c.x>=BAT_X-.05&&c.stage<3&&!c._bat){c._bat=1;c.wait=7;c.x=BAT_X;c.g.position.x=BAT_X;battery.drop={car:c,t:0}}
+      if(c.x>=ASM_X&&c.stage<4&&!c._asm){c._asm=1;c.wait=5;c.x=ASM_X;c.g.position.x=ASM_X;asm.fit={car:c,t:0}}
+      if(c.x>SCAN_X&&c.stage<5&&!c._scan){c._scan=1;stations.find(s=>s.id==='assembly').count++}
+      if(c.x>EXIT_X){c.mode='track';c.path=[[44.5,0],[46.5,-3.5]];c.pi=0;c.lapA=Math.PI;c.laps=0;hall.remove(c.g);world.add(c.g);c.g.position.set(c.x,.4+.42,0)}
+    }else if(c.mode==='track'){
+      const v=(c.laps===0&&c.pi<c.path.length?5:11)*trackMul;c.speed=v;c.odo+=v*dt;
+      if(c.pi<c.path.length){const [tx,tz]=c.path[c.pi];const dx=tx-c.g.position.x,dz=tz-c.g.position.z,d=Math.hypot(dx,dz);if(d<.3)c.pi++;else{c.g.position.x+=dx/d*v*dt;c.g.position.z+=dz/d*v*dt;c.heading=Math.atan2(-dz,dx)}}
+      else{const circ=Math.PI*(3*(TRACK.rx+TRACK.rz)-Math.sqrt((3*TRACK.rx+TRACK.rz)*(TRACK.rx+3*TRACK.rz)));c.lapA+=v*dt/circ*Math.PI*2;const px=TRACK.cx+Math.cos(c.lapA)*TRACK.rx,pz=TRACK.cz+Math.sin(c.lapA)*TRACK.rz;c.heading=Math.atan2(-(pz-c.g.position.z),px-c.g.position.x);c.g.position.set(px,.82,pz);c.g.rotation.z=Math.sin(c.lapA)*-.04;
+        if(c.lapA>Math.PI*3+Math.PI/2*.98){c.laps=1;stations.find(s=>s.id==='track').laps++;setStage(c,5);const slot=yardSlots.find(s=>!s.car);if(slot){slot.car=c;c.slot=slot;c.mode='toYard';c.path=[[TRACK.cx,TRACK.cz+TRACK.rz+2.5],[TRACK.cx,13],[slot.x,13],[slot.x,slot.z+.6]];c.pi=0}else{c.mode='ship';c.path=[[TRACK.cx,TRACK.cz+TRACK.rz+2.5],[TRACK.cx,13],[95,13]];c.pi=0}}}
+      c.g.rotation.y=c.heading;c.wheels.forEach(w=>w.rotation.y+=v*dt/.42);
+    }else if(c.mode==='toYard'||c.mode==='ship'){
+      const v=6*trackMul;c.speed=v;const [tx,tz]=c.path[c.pi];const dx=tx-c.g.position.x,dz=tz-c.g.position.z,d=Math.hypot(dx,dz);
+      if(d<.25){c.pi++;if(c.pi>=c.path.length){if(c.mode==='toYard'){c.mode='parked';c.g.rotation.y=Math.PI/2;c.speed=0;c.parkedT=simT;showToast(`${c.vin} parked · bay ${yardSlots.indexOf(c.slot)+1}`)}else{world.remove(c.g);cars.splice(cars.indexOf(c),1);showToast(`${c.vin} shipped`)}}}
+      else{c.g.position.x+=dx/d*v*dt;c.g.position.z+=dz/d*v*dt;c.g.rotation.y=lerp(c.g.rotation.y,Math.atan2(-dz,dx),Math.min(1,dt*6));c.g.rotation.z=0;c.wheels.forEach(w=>w.rotation.y+=v*dt/.42)}
+    }else if(c.mode==='parked'){c.soc=Math.min(100,c.soc+dt*.35);c.speed=0;if(c.soc>=100&&simT-c.parkedT>40&&cars.filter(x=>x.mode==='parked').length>14){c.slot.car=null;c.slot=null;c.mode='ship';c.path=[[c.g.position.x,13],[95,13]];c.pi=0}}
+  }
+  // battery drop choreography
+  if(battery.drop){const d=battery.drop;d.t+=dt;const t=d.t/7;battery.pack.visible=t<.72;const y=t<.15?-5.2:t<.5?lerp(-5.2,-6.4,smooth((t-.15)/.35)):t<.72?-6.4:lerp(-6.4,-5.2,smooth((t-.72)/.28));battery.hoist.position.y=0;battery.pack.position.y=y;battery.cables.forEach(cb=>{cb.scale.y=(-y-.3)/5;cb.position.y=y/2+.1});
+    if(t>=.6&&d.car.stage<3){setStage(d.car,3);stations.find(s=>s.id==='battery').count++}if(t>=1){battery.drop=null;battery.pack.visible=false}}
+  else{battery.pack.position.y=-5.2;battery.pack.visible=false;battery.bridge.position.z=lerp(battery.bridge.position.z,0,dt)}
+  if(!battery.drop)battery.pack.visible=true;
+  // wheel fit choreography
+  if(asm.fit){const f=asm.fit;f.t+=dt;const t=f.t/5;asm.wheelBots.forEach(wr=>{const k=t<.4?smooth(t/.4):t<.6?1:1-smooth((t-.6)/.4);wr.position.z=wr.userData.dz*(1-k*.55)});if(t>=.5&&f.car.stage<4)setStage(f.car,4);if(t>=1)asm.fit=null}
+  else asm.wheelBots.forEach(wr=>wr.position.z=lerp(wr.position.z,wr.userData.dz,dt*3));
+}
+function updateCarts(dt){
+  for(const c of carts){const tgt=c.pts[c.i];const dx=tgt[0]-c.pos.x,dz=tgt[1]-c.pos.y,d=Math.hypot(dx,dz);
+    if(c.dwell>0){c.dwell-=dt;c.speed=0;c.status='loading';continue}
+    const hx=dx/(d||1),hz=dz/(d||1);c.hx=hx;c.hz=hz;const OFF=.6;c.vis.set(c.pos.x-hz*OFF,c.pos.y+hx*OFF);
+    // give way: anyone ahead within 3.2 u in my lane (same side offset), or crossing traffic closer than 2 u where the lower index has priority
+    let block=false;for(const o of carts){if(o===c)continue;const rx=o.vis.x-c.vis.x,rz=o.vis.y-c.vis.y;const dist=Math.hypot(rx,rz);if(dist>4)continue;const along=rx*hx+rz*hz,lat=Math.abs(-rx*hz+rz*hx);if(along>0&&along<3.2&&lat<.9){block=true;break}const sameDir=o.hx*hx+o.hz*hz>.7;if(!sameDir&&dist<2&&lat<.9&&along>0&&carts.indexOf(o)<carts.indexOf(c)&&o.speed>0){block=true;break}}
+    if(block){c.speed=Math.max(0,c.speed-dt*8);if(c.status!=='yielding'){c.status='yielding';c.yield++}}else{c.speed=Math.min(c.maxSpeed,c.speed+dt*3);c.status='moving'}
+    const step=Math.min(d,c.speed*dt);c.pos.x+=hx*step;c.pos.y+=hz*step;c.soc=Math.max(5,c.soc-dt*.004);
+    if(d<.15){c.i+=c.dir;if(c.i>=c.pts.length||c.i<0){c.dir*=-1;c.i+=c.dir*2;c.dwell=2.5+Math.random();c.trips+=.5;c.load.visible=!c.load.visible}}
+    c.g.position.set(c.vis.x,.72,c.vis.y);if(c.speed>.1)c.g.rotation.y=lerp(c.g.rotation.y,Math.atan2(-hz,hx),Math.min(1,dt*8));}
+}
+function updateTrain(dt){const t=train;const st=stations.find(s=>s.id==='train');
+  if(t.state==='approach'){t.speed=lerp(t.speed,t.x<-60?14:5,dt);t.x+=t.speed*dt;if(t.x>=-18){t.x=-18;t.state='unload';t.t=0;t.wagon=0;st.status='unloading';addAlert('ok','Parts train arrived','IR-7731 at rail dock · 5 wagons',{kind:'station',id:'train'})}}
+  else if(t.state==='unload'){t.t+=dt;const cyc=9;const k=(t.t%cyc)/cyc;const w=t.wagons[t.wagon];const cr=t.crane;const wx=t.x-9-t.wagon*8;cr.g.position.x=lerp(cr.g.position.x,wx,dt*2);
+    const tz=k<.2?0:k<.5?smooth((k-.2)/.3)*8:k<.8?8:8-smooth((k-.8)/.2)*8;cr.trolley.position.z=tz;const lift=k<.1?0:k<.2?smooth((k-.1)/.1):k<.5?1:k<.6?1-smooth((k-.5)/.1):0;const hy=-9.2+lift*5.5;cr.held.position.y=hy;cr.hook.scale.y=(-hy-.6)/6;cr.hook.position.y=hy/2-.1;
+    if(k>=.1&&k<.6&&w?.has){cr.held.visible=true;w.cont.visible=false}else if(k>=.6&&w?.has){w.has=false;cr.held.visible=false;st.count++}
+    if(t.t>=cyc*(t.wagon+1)){t.wagon++;if(t.wagon>=t.wagons.length){t.state='depart';st.status='moving'}}}
+  else if(t.state==='depart'){t.speed=lerp(t.speed,16,dt*.5);t.x+=t.speed*dt;train.crane.trolley.position.z=lerp(train.crane.trolley.position.z,0,dt);if(t.x>170){t.x=-200;t.state='approach';t.speed=14;t.wagons.forEach(w=>{w.has=true;w.cont.visible=true})}}
+  t.g.position.set(t.x,.3,RAIL_Z)}
+function updateParticles(dt){for(let i=0;i<SPARK_N;i++){if(sparkLife[i]<=0)continue;sparkLife[i]-=dt;sparkVel[i].y-=12*dt;sparkPos[i*3]+=sparkVel[i].x*dt;sparkPos[i*3+1]+=sparkVel[i].y*dt;sparkPos[i*3+2]+=sparkVel[i].z*dt;if(sparkLife[i]<=0)sparkPos[i*3+1]=-100}sparkGeo.attributes.position.needsUpdate=true}
+let shownCars=0;const taktRing=document.getElementById('taktRing');
+function updateUIFrame(){
+  if(shownCars!==kpi.cars){shownCars+=(kpi.cars-shownCars)*.15;if(Math.abs(kpi.cars-shownCars)<.05)shownCars=kpi.cars;document.getElementById('kCars').innerHTML=`${Math.round(shownCars)}<small>/ ${kpi.target}</small>`}
+  taktRing.style.strokeDashoffset=1-((simT%kpi.takt)/kpi.takt);const slatOff=(simT*CONV_SPEED)%1.5;slats.forEach((s,i)=>{s.position.x=-36+((i*1.5+slatOff)%76)});
+  if(sel){const o=selObject(sel);if(!o){deselect();return}o.getWorldPosition(_v);ring.position.set(_v.x,.8,_v.z);const r=sel.kind==='car'?1.1:sel.kind==='cart'?.6:1.6;ring.scale.setScalar(r);ring.rotation.z+=.01;
+    const p=_v.clone();p.y+=sel.kind==='car'?2.2:sel.kind==='cart'?1.5:(stations.find(s=>s.id===sel.id)?.pos.y||3)+3;p.project(camera);lblEl.style.left=((p.x+1)/2*innerWidth)+'px';lblEl.style.top=((1-p.y)/2*innerHeight)+'px';
+    document.getElementById('lblName').textContent=selName(sel);document.getElementById('lblMeta').textContent=sel.kind==='car'?sel.car.stageNames[sel.car.stage]:sel.kind==='cart'?sel.cart.status:stations.find(s=>s.id===sel.id)?.status||''}
+  // tracker
+  const tc=trackerCar();if(tc){document.getElementById('trVin').textContent=tc.vin;document.querySelectorAll('#steps .step').forEach((el,i)=>{el.classList.toggle('done',i<=tc.stage);el.classList.toggle('now',i===tc.stage+1)});document.getElementById('stepFill').style.width=`calc((100% - 24px) * ${tc.stage/5})`;document.getElementById('trEl').textContent=fmtT((performance.now()-tc.t0)/1000);document.getElementById('trPack').textContent=tc.packKWh+' kWh';document.getElementById('trCol').textContent=colorName(tc.color)}}
+let uiTick=0;function updateUISlow(dt){uiTick+=dt;if(uiTick<1)return;uiTick=0;kpi.takt=clamp(kpi.takt+rnd(-.4,.4),64,74);kpi.taktH.push(kpi.takt);if(kpi.taktH.length>40)kpi.taktH.shift();if(Math.random()<.2){kpi.fpy=clamp(kpi.fpy+rnd(-.3,.3),94,99.4);kpi.fpyH.push(kpi.fpy);if(kpi.fpyH.length>40)kpi.fpyH.shift()}
+  stations.forEach(s=>{s.uptime=clamp((s.uptime??97.4)+rnd(-.05,.05),92,99.9)});
+  if(Math.random()<.04){const r=robots[Math.floor(Math.random()*6)];if(r.st){addAlert('warn',`${r.st.name} tip wear`,'Cap change due in 40 welds',{kind:'station',id:r.st.id})}}
+  if(Math.random()<.02){kpi.rework++;addAlert('bad','Paint defect flagged','Orange peel on rear quarter · rework lane',{kind:'station',id:'paint'})}
+  updateKPIs();renderTable();if(sel)renderDetail()}
+
+/* ───────────── main loop ───────────── */
+resize();updateKPIs();renderTable();renderAlerts();
+addAlert('ok','Shift B started','Line 1 running at planned takt');
+const clock=new THREE.Clock();let frames=0;let entered=false;const ld=document.getElementById('loading');
+document.getElementById('ldTime').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+function enter(){if(entered)return;entered=true;ld.classList.add('hide');document.querySelectorAll('.ui.pre').forEach(el=>el.classList.remove('pre'));cam.k=.0015;cam.idle=0;setTimeout(()=>ld.remove(),1200)}
+ld.onclick=enter;addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')enter()},{once:true});
+let ldP=0;const ldSteps=['warming up the line','teaching the robots','charging the yard','releasing first body'];
+const ldTimer=setInterval(()=>{ldP=Math.min(1,ldP+.12);document.getElementById('ldBar').style.setProperty('--p',ldP);document.getElementById('ldPct').textContent=Math.round(ldP*100)+'%';document.getElementById('ldStep').textContent=ldSteps[Math.min(3,Math.floor(ldP*4))];if(ldP>=1){clearInterval(ldTimer);setTimeout(enter,reduceMotion?0:500)}},180);
+function tick(dt){simT+=dt;updateStations(dt);updateCars(dt);updateCarts(dt);updateTrain(dt);updateParticles(dt);updateEnv(dt);updateCamera(dt);updateUIFrame();updateUISlow(dt)}
+function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta());tick(dt);render();perfSample(clock.getDelta()+dt);frames++}
+// seed a few cars already on the line so the floor is busy at load
+for(const x of[30,16,2,-12,-28]){const c=makeCar();c.x=x;c.g.position.x=x;if(x>BODY_X1)setStage(c,1);if(x>PAINT_X0+5.5)setStage(c,2);if(x>BAT_X){c._bat=1;setStage(c,3)}if(x>=ASM_X){c._asm=1}}
+spawnT=20;
+window.__v={step:(n,dt=.033)=>{for(let i=0;i<n;i++)tick(dt);render();enter()},kpi,cam,cars,carts,stations,select,deselect,setWeather,get sel(){return sel},get simT(){return simT},train};
+loop();
+</script>
+</body>
+</html>
