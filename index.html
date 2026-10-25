@@ -117,7 +117,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font
 .follow{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--ink-2)}
 .follow b{color:var(--accent-ink)}
 /* build tracker */
-#tracker{left:14px;bottom:14px;width:300px;padding:14px}
+#tracker{left:14px;bottom:14px;width:380px;padding:14px}
 #tracker h4,#table h4{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center}
 #tracker h4 span{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--accent-ink)}
 .steps{display:flex;align-items:flex-start;justify-content:space-between;margin-top:14px;position:relative}
@@ -214,9 +214,9 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 #wx.fog{opacity:1;background:radial-gradient(ellipse at 50% 60%,rgba(255,255,255,0) 20%,rgba(226,232,240,.55) 90%)}
 #wx.heat{opacity:1;background:linear-gradient(180deg,rgba(251,191,36,.10),rgba(249,115,22,.05))}
 #wx.rain{opacity:1;background:linear-gradient(180deg,rgba(30,41,59,.12),rgba(30,41,59,.04))}
-@media (max-width:1280px){#hint{display:none!important}.pill.user{display:none}.logo small{display:none}.search{flex-basis:200px}#credBtn .rate{display:none}}
+@media (max-width:1380px){#hint{display:none!important}.pill.user{display:none}.logo small{display:none}.search{flex-basis:200px}#credBtn .rate{display:none}}
 @media (max-width:1100px){#wxName{display:none}.seg button{padding:0 9px}}
-#hint{left:50%;top:84px;transform:translateX(-50%);padding:7px 12px;font-size:11px;color:var(--ink-2);display:flex;gap:14px;font-family:var(--mono)}
+#hint{left:calc(50% + 60px);top:84px;transform:translateX(-50%);padding:7px 12px;font-size:11px;color:var(--ink-2);display:flex;gap:14px;font-family:var(--mono)}
 #hint b{color:var(--ink);font-weight:500}
 #loading{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:flex-end;padding:clamp(20px,5vw,64px);transition:opacity .9s cubic-bezier(.2,.8,.2,1),transform .9s cubic-bezier(.2,.8,.2,1);cursor:pointer}
 #loading.hide{opacity:0;pointer-events:none;transform:scale(1.02)}
@@ -288,6 +288,98 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   .mob-tabs button.on{background:var(--accent-soft);color:var(--accent-ink)}
   #toast{bottom:64px}
 }
+
+/* ═══════ factory skin: powder-coat housings, andon board, lamps, stencils ═══════ */
+:root{--panel:#f7f4ee;--panel-2:#efeae1;--edge:#cfd3da;--edge-2:#9aa3b0;--board:#1f2530;--board-2:#2a3140;--board-ink:#eef1f5;--board-dim:#8e98a8;--lamp-ok:#10B981;--lamp-warn:#f5b02a;--lamp-bad:#ef4444;--radius:8px}
+:root[data-night="1"]{--panel:#2a3140;--panel-2:#232a37;--edge:#4b5567;--edge-2:#6b7686;--glass:#2a3140;--glass-strong:#232a37}
+.glass{background:var(--panel);backdrop-filter:none;-webkit-backdrop-filter:none;border:1px solid var(--edge);border-radius:8px;box-shadow:0 2px 0 var(--edge),0 14px 28px rgba(15,23,42,.10)}
+:root[data-night="1"] .glass{box-shadow:0 2px 0 #11161f,0 14px 28px rgba(0,0,0,.45)}
+#top{border-radius:8px;height:54px}
+.search input{border-radius:6px;background:#fff}
+:root[data-night="1"] .search input{background:#1a2030}
+.seg{border-radius:6px;background:var(--panel-2);padding:3px;gap:3px;border:1px solid var(--edge)}
+.seg button{border-radius:4px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1;gap:2px;height:34px;padding:0 10px;font-size:12px}
+.seg button small{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--ink-3);font-weight:500}
+.seg button.on{background:var(--board);color:var(--board-ink)}
+.seg button.on small{color:var(--lamp-ok)}
+.pill{border-radius:6px;background:#fff;border-color:var(--edge)}
+:root[data-night="1"] .pill{background:#1a2030}
+.pill:hover{border-color:var(--edge-2)}
+.takt{inset:-3px;border-radius:9px}.takt rect{rx:6}
+.menu,.search-results,#alerts{border-radius:8px}
+.menu button,.search-results button,.al{border-radius:5px}
+/* andon board */
+#kpis{gap:0;background:var(--board);border-radius:8px;box-shadow:0 2px 0 #0b0f16,0 14px 28px rgba(15,23,42,.18);padding:4px;border:1px solid #0b0f16}
+.kpi{background:transparent;border:0;box-shadow:none;border-radius:6px;position:relative;width:176px}
+.kpi+.kpi{border-left:1px solid var(--board-2)}
+.kpi .lbl{color:var(--board-dim);font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;gap:7px;justify-content:flex-start}
+.kpi .val{color:var(--board-ink);font-family:var(--mono);font-weight:500;font-size:28px;letter-spacing:-.02em}
+.kpi .val small{color:var(--board-dim)}
+.kpi .sub{color:var(--board-dim)}.kpi .sub b{color:#6ee7b7}.kpi .sub b.neg{color:#fca5a5}
+.spark path{stroke:#6ee7b7}.spark .area{fill:#10B981;opacity:.18}
+.lamp{width:9px;height:9px;border-radius:50%;background:var(--lamp-ok);box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 10px var(--lamp-ok);flex:0 0 auto;transition:background .4s,box-shadow .4s}
+.lamp.warn{background:var(--lamp-warn);box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 10px var(--lamp-warn)}
+.lamp.bad{background:var(--lamp-bad);box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 10px var(--lamp-bad);animation:pulse 1s infinite}
+/* status as lamps, not pills */
+.chip,.status{background:transparent!important;padding:0;border-radius:0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;color:var(--ink-2)!important;display:inline-flex;align-items:center;gap:6px}
+.chip::before,.status i{content:"";width:7px;height:7px;border-radius:50%;background:var(--lamp-ok);box-shadow:0 0 6px var(--lamp-ok);display:inline-block;animation:none}
+.chip.warn::before,.status.warn i{background:var(--lamp-warn);box-shadow:0 0 6px var(--lamp-warn)}
+.chip.bad::before,.status.bad i{background:var(--lamp-bad);box-shadow:0 0 6px var(--lamp-bad)}
+.chip.idle::before{background:var(--edge-2);box-shadow:none}
+/* stencil headings */
+#tracker h4,#table h4,#plant h5{font-family:var(--mono);letter-spacing:.16em;font-size:10px;color:var(--ink-2)}
+#tracker h4::before,#table h4::before,#plant h5::before{content:"";width:8px;height:8px;background:var(--accent);margin-right:8px;display:inline-block;clip-path:polygon(0 0,100% 0,100% 100%)}
+#tracker h4 span,#tblMeta{color:var(--ink)}
+/* line map */
+#lineMap{display:block;width:100%;height:auto;margin-top:10px;overflow:visible}
+#lineMap .belt{stroke:var(--edge-2);stroke-width:5;fill:none;stroke-linecap:round}
+#lineMap .belt2{stroke:var(--panel-2);stroke-width:2;fill:none;stroke-dasharray:3 4}
+:root[data-night="1"] #lineMap .belt2{stroke:#4b5567}
+#lineMap .gate{fill:var(--panel);stroke:var(--edge-2);stroke-width:1.2;cursor:pointer}
+#lineMap .gate.done{fill:var(--accent);stroke:var(--accent)}
+#lineMap .gate.now{stroke:var(--accent);stroke-width:2}
+#lineMap text{font-family:var(--mono);font-size:8px;fill:var(--ink-3);letter-spacing:.06em;text-anchor:middle;pointer-events:none}
+#lineMap text.num{fill:var(--ink);font-weight:600}
+#lineMap .car{fill:var(--ink-2);stroke:var(--panel);stroke-width:1;cursor:pointer}
+#lineMap .car.me{fill:var(--accent);stroke:#fff;stroke-width:1.5}
+#lineMap .loop{fill:none;stroke:var(--edge-2);stroke-width:3}
+#lineMap .yard{fill:var(--panel-2);stroke:var(--edge);stroke-width:1}
+#lineMap .bay{fill:var(--edge)}
+#lineMap .bay.full{fill:var(--accent)}
+/* nameplates: detail + plant + hover */
+#detail .hd,#plant .hd{margin:-14px -14px 2px;padding:12px 14px;background:var(--board);color:var(--board-ink);border-radius:7px 7px 0 0}
+#detail h3,#plant h3{color:var(--board-ink)}
+#detail .type,#plant .hd div div{color:var(--board-dim)!important}
+#detail .x,#plant .x{color:var(--board-dim)}#detail .x:hover,#plant .x:hover{background:var(--board-2);color:#fff}
+#detail .status{color:var(--ink)!important}
+.stat{border-radius:5px;background:var(--panel-2);border-color:var(--edge)}
+.stat .k{font-family:var(--mono)}
+.bar{border-radius:2px;background:var(--panel-2)}
+#lbl .tag,#hov,#toast{background:var(--board);color:var(--board-ink);border-color:#0b0f16;border-radius:5px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+#lbl .tag span,#hov span{color:var(--board-dim)}
+#lbl .stem{background:var(--board)}#lbl .pt{background:var(--accent);box-shadow:0 0 0 3px var(--board)}
+.tabs{border-radius:6px;background:var(--panel-2);border:1px solid var(--edge)}
+.tabs button{border-radius:4px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.tabs button.on{background:var(--board);color:var(--board-ink);box-shadow:none}
+th{background:var(--panel);font-family:var(--mono)}
+tr.sel td{background:var(--accent-soft)}
+.prod,.upg{border-radius:6px;background:var(--panel-2)}
+.prod.on{background:var(--accent-soft)}
+.buy{border-radius:5px}.buy.max{border-radius:5px}
+.mob-tabs{border-radius:8px}.mob-tabs button{border-radius:5px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.mob-tabs button.on{background:var(--board);color:var(--board-ink)}
+#areasMob button{border-radius:6px;background:var(--panel);backdrop-filter:none;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+#areasMob button.on{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.avatar{border-radius:6px}
+.toggle{border-radius:6px}.toggle::after{border-radius:4px}
+#hint{font-size:10.5px;border-radius:6px}
+@media (max-width:900px){
+  #kpis{padding:3px}.kpi{width:auto;flex:1 0 136px}
+  #detail,#plant{border-radius:12px 12px 0 0}
+  #detail .hd,#plant .hd{margin:-8px -16px 2px;padding:10px 16px;border-radius:0}
+  #detail::before,#plant::before{display:none}
+  .seg button{height:36px}
+}
 </style>
 </head>
 <body>
@@ -316,7 +408,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
     <div id="qres" class="search-results glass"></div>
   </div>
   <div class="seg" id="areas">
-    <button data-area="press">Press</button><button data-area="body">Body</button><button data-area="paint">Paint</button><button data-area="battery">Battery</button><button data-area="assembly">Assembly</button><button data-area="track">Test track</button>
+    <button data-area="press"><small>ST-01</small>Press</button><button data-area="body"><small>ST-02</small>Body</button><button data-area="paint"><small>ST-03</small>Paint</button><button data-area="battery"><small>ST-04</small>Battery</button><button data-area="assembly"><small>ST-05</small>Assembly</button><button data-area="track"><small>ST-06</small>Test track</button>
   </div>
   <div class="spacer"></div>
   <button class="pill" id="credBtn" aria-label="Credits and plant upgrades" title="Plant upgrades"><b>⚡</b><span id="credTxt">0</span><span class="rate" id="rateTxt"></span></button>
@@ -338,13 +430,13 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   <div class="pill user" style="padding:0 10px 0 4px;gap:8px"><div class="avatar">SP</div><div style="line-height:1.1"><div style="font-weight:600">Shift lead</div><div style="font-family:var(--mono);font-size:10px;color:var(--ink-3)" id="shiftTxt">Shift B · Line 1</div></div></div>
 </header>
 
-<div id="areasMob" aria-label="Areas"><button data-area="overview">Overview</button><button data-area="press">Press</button><button data-area="body">Body</button><button data-area="paint">Paint</button><button data-area="battery">Battery</button><button data-area="assembly">Assembly</button><button data-area="track">Test track</button></div>
+<div id="areasMob" aria-label="Areas"><button data-area="overview">Plant</button><button data-area="press">01 Press</button><button data-area="body">02 Body</button><button data-area="paint">03 Paint</button><button data-area="battery">04 Battery</button><button data-area="assembly">05 Assembly</button><button data-area="track">06 Track</button></div>
 <div id="hint" class="ui pre glass"><span><b>drag</b> pan</span><span><b>right-drag</b> rotate</span><span><b>scroll</b> zoom</span><span><b>click</b> anything</span></div>
 
 <section id="kpis" class="ui pre">
-  <div class="kpi glass"><div class="lbl">Cars built today <span class="status"><i></i>LIVE</span></div><div class="val" id="kCars">0<small>/ 412</small></div><div class="sub"><b id="kCarsD">+0</b> vs shift target</div><svg class="spark" id="sp1" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
-  <div class="kpi glass"><div class="lbl">Line takt time</div><div class="val" id="kTakt">68.4<small>s</small></div><div class="sub">plan 70.0s · <b id="kTaktD">−1.6s</b></div><svg class="spark" id="sp2" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
-  <div class="kpi glass"><div class="lbl">First pass yield</div><div class="val" id="kFpy">97.2<small>%</small></div><div class="sub">rework queue <b id="kFpyD">3</b></div><svg class="spark" id="sp3" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl"><i class="lamp" id="lamp1"></i>Cars built today</div><div class="val" id="kCars">0<small>/ 412</small></div><div class="sub"><b id="kCarsD">+0</b> vs shift target</div><svg class="spark" id="sp1" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl"><i class="lamp" id="lamp2"></i>Line takt time</div><div class="val" id="kTakt">68.4<small>s</small></div><div class="sub">plan 70.0s · <b id="kTaktD">−1.6s</b></div><svg class="spark" id="sp2" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
+  <div class="kpi glass"><div class="lbl"><i class="lamp" id="lamp3"></i>First pass yield</div><div class="val" id="kFpy">97.2<small>%</small></div><div class="sub">rework queue <b id="kFpyD">3</b></div><svg class="spark" id="sp3" viewBox="0 0 140 28" preserveAspectRatio="none"></svg></div>
 </section>
 
 <aside id="detail" class="ui glass">
@@ -364,15 +456,13 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 </aside>
 <div id="welcome"><div class="card glass"><h3>Welcome back</h3><p>The line kept running while you were away.</p><div class="big" id="wbAmt">+0 ⚡</div><p id="wbMeta"></p><button class="buy" id="wbOk">Collect</button></div></div>
 <section id="tracker" class="ui pre glass">
-  <h4>Build tracker <span id="trVin">VIN —</span></h4>
-  <div class="steps" id="steps"><div class="fill" id="stepFill"></div>
-    <div class="step"><i>1</i><span>Stamped</span></div><div class="step"><i>2</i><span>Welded</span></div><div class="step"><i>3</i><span>Painted</span></div><div class="step"><i>4</i><span>Battery in</span></div><div class="step"><i>5</i><span>Assembled</span></div><div class="step"><i>6</i><span>Tested</span></div>
-  </div>
+  <h4>Line 1 · plan view <span id="trVin">VIN —</span></h4>
+  <svg id="lineMap" viewBox="0 0 300 78" aria-label="Line 1 plan view with live vehicles"></svg>
   <div class="tr-meta"><span>elapsed <b id="trEl">0s</b></span><span>pack <b id="trPack">—</b></span><span>colour <b id="trCol">—</b></span></div>
 </section>
 
 <section id="table" class="ui pre glass">
-  <h4>Live floor <span style="font-family:var(--mono);text-transform:none;letter-spacing:0" id="tblMeta"></span></h4>
+  <h4>Shift board <span style="font-family:var(--mono);text-transform:none;letter-spacing:0" id="tblMeta"></span></h4>
   <div class="tabs"><button class="on" data-tab="stations">Stations</button><button data-tab="carts">Carts</button><button data-tab="vehicles">Vehicles</button></div>
   <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
 </section>
@@ -506,6 +596,12 @@ zoneMark(-38,-23,-17,5);zoneMark(-21,-6,-17,5);zoneMark(-4,8,-17,5);zoneMark(10,
 // cart lane stripes
 function lane(x0,z0,x1,z1){const dx=x1-x0,dz=z1-z0,len=Math.hypot(dx,dz);const m=new THREE.Mesh(new THREE.PlaneGeometry(len,.9),M.lane);m.rotation.x=-Math.PI/2;m.rotation.z=-Math.atan2(dz,dx);m.position.set((x0+x1)/2,.71,(z0+z1)/2);world.add(m);
   const l2=new THREE.Mesh(new THREE.PlaneGeometry(len,.08),M.line);l2.rotation.copy(m.rotation);l2.position.copy(m.position);l2.position.y=.73;world.add(l2)}
+
+/* ───────────── floor stencils: the station numbers the UI uses ───────────── */
+function stencil(text,x,z,w,rot=0,color='#8a94a6'){const cv=document.createElement('canvas');cv.width=512;cv.height=96;const g=cv.getContext('2d');g.fillStyle=color;g.font='600 54px "JetBrains Mono", ui-monospace, monospace';g.textAlign='center';g.textBaseline='middle';g.letterSpacing='6px';g.fillText(text,256,50);
+  const tx=new THREE.CanvasTexture(cv);tx.colorSpace=THREE.SRGBColorSpace;tx.anisotropy=4;const m=new THREE.Mesh(new THREE.PlaneGeometry(w,w*96/512),new THREE.MeshBasicMaterial({map:tx,transparent:true,opacity:.75,depthWrite:false}));m.rotation.x=-Math.PI/2;m.rotation.z=rot;m.position.set(x,.74,z);m.renderOrder=2;world.add(m);return m}
+document.fonts?.ready.then(()=>{stencil('ST-01 PRESS',-30,3.6,11);stencil('ST-02 BODY',-13,3.6,10);stencil('ST-03 PAINT',2,6.2,10);stencil('ST-04 BATTERY',16,3.6,12);stencil('ST-05 ASSEMBLY',31,3.6,13);
+  stencil('ST-06 TEST TRACK',62,TRACK.cz+TRACK.rz-1.2,16,0,'#cbd5e1');stencil('CHARGE YARD',YARD.x0+10.8,YARD.z0-4.6,14,0,'#6b7280');stencil('RAIL DOCK · GATE 7',-22,RAIL_Z+13.5,16,0,'#6b7280');stencil('GF-01 · LINE 1',2,11.6,22,0,'#94a3b8')});
 
 /* ───────────── office block ───────────── */
 const office=new THREE.Group();world.add(office);
@@ -798,7 +894,8 @@ function addAlert(level,title,msg,target){alerts.unshift({level,title,msg,target
 function renderAlerts(){document.getElementById('alCount').textContent=alerts.filter(a=>a.level!=='ok').length;alBox.innerHTML=alerts.map((a,i)=>`<div class="al ${a.level}" data-i="${i}"><i></i><div><b>${a.title}</b><span>${a.msg}</span></div><small>${a.t.toTimeString().slice(0,5)}</small></div>`).join('')||'<div class="al"><span>No alerts</span></div>'}
 alBox.onclick=e=>{const el=e.target.closest('.al');if(!el)return;const a=alerts[+el.dataset.i];if(a?.target)select(a.target);alBox.classList.remove('open')}
 function spark(id,arr){const el=document.getElementById(id);if(!el||arr.length<2)return;const a=arr.slice(-30);const mn=Math.min(...a),mx=Math.max(...a),r=mx-mn||1;const pts=a.map((v,i)=>[i/(a.length-1)*140,26-(v-mn)/r*22]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');el.innerHTML=`<path class="area" d="${d} L140 28 L0 28Z"/><path d="${d}"/>`}
-function updateKPIs(){const h=new Date().getHours()+new Date().getMinutes()/60;const pace=Math.round(kpi.target*(h/24));const d=kpi.cars-pace;const kd=document.getElementById('kCarsD');kd.textContent=(d>=0?'+':'−')+Math.abs(d);kd.className=d<0?'neg':'';
+function lamp(id,level){const el=document.getElementById(id);if(el)el.className='lamp'+(level?' '+level:'')}
+function updateKPIs(){const h=new Date().getHours()+new Date().getMinutes()/60;const pace=Math.round(kpi.target*(h/24));const d=kpi.cars-pace;const kd=document.getElementById('kCarsD');kd.textContent=(d>=0?'+':'−')+Math.abs(d);kd.className=d<0?'neg':'';lamp('lamp1',d<-25?'bad':d<-10?'warn':'');lamp('lamp2',kpi.takt>72?'bad':kpi.takt>70?'warn':'');lamp('lamp3',kpi.fpy<95?'bad':kpi.fpy<96?'warn':'');
   document.getElementById('kTakt').innerHTML=`${kpi.takt.toFixed(1)}<small>s</small>`;const td=document.getElementById('kTaktD');td.textContent=(kpi.takt-70>=0?'+':'−')+Math.abs(kpi.takt-70).toFixed(1)+'s';td.className=kpi.takt>70?'neg':'';
   document.getElementById('kFpy').innerHTML=`${kpi.fpy.toFixed(1)}<small>%</small>`;document.getElementById('kFpyD').textContent=kpi.rework;spark('sp1',kpi.history.length>1?kpi.history:[0,0]);spark('sp2',kpi.taktH);spark('sp3',kpi.fpyH)}
 // table
@@ -979,8 +1076,31 @@ function updateUIFrame(){
   if(sel){const o=selObject(sel);if(!o){deselect();return}o.getWorldPosition(_v);ring.position.set(_v.x,.8,_v.z);const r=sel.kind==='car'?1.1:sel.kind==='cart'?.6:1.6;ring.scale.setScalar(r);ring.rotation.z+=.01;
     const p=_v.clone();p.y+=sel.kind==='car'?2.2:sel.kind==='cart'?1.5:(stations.find(s=>s.id===sel.id)?.pos.y||3)+3;p.project(camera);lblEl.style.left=((p.x+1)/2*innerWidth)+'px';lblEl.style.top=((1-p.y)/2*innerHeight)+'px';
     document.getElementById('lblName').textContent=selName(sel);document.getElementById('lblMeta').textContent=sel.kind==='car'?sel.car.stageNames[sel.car.stage]:sel.kind==='cart'?sel.cart.status:stations.find(s=>s.id===sel.id)?.status||''}
-  // tracker
-  const tc=trackerCar();if(tc){document.getElementById('trVin').textContent=tc.vin;document.querySelectorAll('#steps .step').forEach((el,i)=>{el.classList.toggle('done',i<=tc.stage);el.classList.toggle('now',i===tc.stage+1)});document.getElementById('stepFill').style.width=`calc((100% - 24px) * ${tc.stage/5})`;document.getElementById('trEl').textContent=fmtT((performance.now()-tc.t0)/1000);document.getElementById('trPack').textContent=tc.packKWh+' kWh';document.getElementById('trCol').textContent=colorName(tc.color)}}
+  // line map
+  const tc=trackerCar();if(tc){document.getElementById('trVin').textContent=tc.vin;document.getElementById('trEl').textContent=fmtT((performance.now()-tc.t0)/1000);document.getElementById('trPack').textContent=tc.packKWh+' kWh';document.getElementById('trCol').textContent=colorName(tc.color)}
+  updateLineMap(tc)}
+/* plan view of Line 1: real station x positions, live cars, loop and yard */
+const LM={x0:-38,x1:42,px0:8,px1:198,y:30,gates:[['01','PRESS',-29,'press'],['02','BODY',-13,'body'],['03','PAINT',2,'paint'],['04','BATT',16,'battery'],['05','ASSY',30,'assembly']],loop:{cx:236,cy:30,rx:22,ry:13},yard:{x:262,y:50,w:34,h:20}};
+const lmX=x=>LM.px0+(x-LM.x0)/(LM.x1-LM.x0)*(LM.px1-LM.px0);
+const lineMap=document.getElementById('lineMap');
+{const g=[];g.push(`<path class="belt" d="M${LM.px0} ${LM.y}H${LM.px1}"/><path class="belt2" d="M${LM.px0} ${LM.y}H${LM.px1}"/>`);
+ g.push(`<path class="belt" d="M${LM.px1} ${LM.y}H${LM.loop.cx-LM.loop.rx}"/>`);
+ g.push(`<ellipse class="loop" cx="${LM.loop.cx}" cy="${LM.loop.cy}" rx="${LM.loop.rx}" ry="${LM.loop.ry}"/>`);
+ g.push(`<text x="${LM.loop.cx}" y="${LM.loop.cy+2}">06 TRACK</text>`);
+ g.push(`<rect class="yard" x="${LM.yard.x}" y="${LM.yard.y}" width="${LM.yard.w}" height="${LM.yard.h}" rx="2"/>`);
+ for(let i=0;i<21;i++){const c=i%7,r=Math.floor(i/7);g.push(`<rect class="bay" data-bay="${i}" x="${LM.yard.x+3+c*4.3}" y="${LM.yard.y+3+r*5.4}" width="3" height="4" rx=".6"/>`)}
+ g.push(`<text x="${LM.yard.x+LM.yard.w/2}" y="${LM.yard.y-3}">YARD</text>`);
+ LM.gates.forEach(([n,l,x,area])=>{const px=lmX(x);g.push(`<rect class="gate" data-area="${area}" x="${px-8}" y="${LM.y-10}" width="16" height="20" rx="2"/><text class="num" x="${px}" y="${LM.y+3}" style="font-size:8.5px">${n}</text><text x="${px}" y="${LM.y+23}">${l}</text>`)});
+ g.push(`<text x="${LM.px0}" y="${LM.y-14}" style="text-anchor:start">BODY IN</text><text x="${LM.px1}" y="${LM.y-14}" style="text-anchor:end">EOL</text>`);
+ g.push(`<g id="lmCars"></g>`);lineMap.innerHTML=g.join('')}
+lineMap.onclick=e=>{const t=e.target;if(t.dataset.area){const a=AREAS[t.dataset.area];deselect();flyTo(a.t,a.z,Math.PI/4);showToast('Flying to '+t.nextElementSibling.nextElementSibling.textContent)}else if(t.dataset.vin){const c=cars.find(x=>x.vin===t.dataset.vin);if(c)select({kind:'car',car:c})}else if(t.dataset.bay!==undefined){const c=yardSlots[+t.dataset.bay]?.car;if(c)select({kind:'car',car:c})}};
+const lmCars=document.getElementById('lmCars');let lmTick=0;
+function updateLineMap(tc){lmTick++;if(lmTick%4)return;const parts=[];
+  for(const c of cars){let x,y;if(c.mode==='line'){x=lmX(c.x);y=LM.y}else if(c.mode==='track'){if(c.pi<(c.path?.length||0)){x=lmX(42)+((c.g.position.x-41)/5)*(LM.loop.cx-LM.loop.rx-LM.px1);y=LM.y}else{x=LM.loop.cx+Math.cos(c.lapA)*LM.loop.rx;y=LM.loop.cy+Math.sin(c.lapA)*LM.loop.ry}}else if(c.mode==='toYard'){x=LM.loop.cx+(LM.yard.x+LM.yard.w/2-LM.loop.cx)*Math.min(1,c.pi/3);y=LM.loop.cy+LM.loop.ry+(LM.yard.y-LM.loop.cy-LM.loop.ry)*Math.min(1,c.pi/3)}else continue;
+    parts.push(`<circle class="car ${c===tc?'me':''}" data-vin="${c.vin}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c===tc?3.4:2.4}"/>`)}
+  lmCars.innerHTML=parts.join('');
+  const bays=lineMap.querySelectorAll('.bay');yardSlots.forEach((s,i)=>bays[i]?.classList.toggle('full',!!s.car));
+  if(tc){lineMap.querySelectorAll('.gate').forEach((g,i)=>{g.classList.toggle('done',tc.stage>i);g.classList.toggle('now',tc.stage===i&&tc.mode==='line')})}}
 let uiTick=0;function updateUISlow(dt){if(GAME.solarRate){GAME.credits+=GAME.solarRate*dt;GAME.lifetime+=GAME.solarRate*dt}uiTick+=dt;if(uiTick<1)return;uiTick=0;kpi.takt=clamp(kpi.takt+rnd(-.4,.4),64,74);kpi.taktH.push(kpi.takt);if(kpi.taktH.length>40)kpi.taktH.shift();if(Math.random()<.2){kpi.fpy=clamp(kpi.fpy+rnd(-.3,.3)+((kpi.fpyBase||97.2)-kpi.fpy)*.1,94,99.6);kpi.fpyH.push(kpi.fpy);if(kpi.fpyH.length>40)kpi.fpyH.shift()}
   stations.forEach(s=>{s.uptime=clamp((s.uptime??97.4)+rnd(-.05,.05),92,99.9)});
   if(Math.random()<.04){const r=robots[Math.floor(Math.random()*6)];if(r.st){addAlert('warn',`${r.st.name} tip wear`,'Cap change due in 40 welds',{kind:'station',id:r.st.id})}}
@@ -1000,7 +1120,7 @@ function tick(dt){simT+=dt;updateStations(dt);updateCars(dt);updateCarts(dt);upd
 function loop(){requestAnimationFrame(loop);const dt=Math.min(.05,clock.getDelta());tick(dt);render();perfSample(clock.getDelta()+dt);frames++}
 // seed a few cars already on the line so the floor is busy at load
 for(const x of[30,16,2,-12,-28]){const c=makeCar();c.x=x;c.g.position.x=x;if(x>BODY_X1)setStage(c,1);if(x>PAINT_X0+5.5)setStage(c,2);if(x>BAT_X){c._bat=1;setStage(c,3)}if(x>=ASM_X){c._asm=1;setStage(c,4)}}
-applyUpgrades();credTxt.textContent=fmtC(GAME.credits);
+applyUpgrades();credTxt.textContent=fmtC(GAME.credits);document.getElementById('kCars').innerHTML=`${kpi.cars}<small>/ ${kpi.target}</small>`;
 spawnT=20;
 window.__v={camera,G:GAME,PRODUCTS,UPGRADES,applyUpgrades,step:(n,dt=.033)=>{for(let i=0;i<n;i++)tick(dt);render();enter()},kpi,cam,cars,carts,stations,select,deselect,setWeather,get sel(){return sel},get simT(){return simT},train};
 loop();
