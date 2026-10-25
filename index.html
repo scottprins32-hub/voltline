@@ -202,6 +202,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
 .autochip{position:absolute;top:-7px;right:-4px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:1px 4px;border-radius:4px;background:var(--accent);color:#fff;pointer-events:none;opacity:0;transition:opacity .3s}
 .autochip.on{opacity:1}
 #areasMob{display:none}
+@media (max-width:900px){#loading .eyebrow span:nth-child(-n+5){display:none}#loading .eyebrow{gap:10px}#loading h1{font-size:clamp(84px,24vw,140px)}}
 @media (prefers-reduced-motion:reduce){.ui,#loading,.toggle::after,.kpi .val{transition:none!important}.status i{animation:none}}
 /* mobile */
 .mob-tabs{display:none}
@@ -212,7 +213,6 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   #areasMob::-webkit-scrollbar{display:none}
   #areasMob button{flex:0 0 auto;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(14px);font:inherit;font-weight:600;font-size:12px;color:var(--ink);box-shadow:var(--shadow)}
   #areasMob button.on{background:var(--accent);color:#fff;border-color:transparent}
-  #kpis{top:calc(112px + var(--sat))}
   #detail{border-radius:22px 22px 0 0;bottom:0;left:0;right:0;top:auto;width:auto;max-height:52vh;padding:8px 16px calc(16px + var(--sab) + 58px);transform:translateY(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex}
   #detail.open{transform:translateY(0)}
   #detail::before{content:"";display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 8px}
@@ -227,7 +227,7 @@ tr.sel td{background:var(--accent-soft);font-weight:600}
   .logo span{display:none}.logo small{display:none}
   .search{flex:1 1 auto}
   #areas,#hint,.pill.user,.clock{display:none}
-  #kpis{top:70px;left:10px;right:10px;gap:6px;overflow-x:auto;scrollbar-width:none}
+  #kpis{top:calc(114px + var(--sat));left:10px;right:10px;gap:6px;overflow-x:auto;scrollbar-width:none}
   .kpi{width:auto;flex:1 0 128px;padding:9px 11px}.kpi .val{font-size:20px}.spark{display:none}
   #detail{top:auto;right:10px;left:10px;bottom:68px;width:auto;max-height:46vh}
   #tracker,#table{left:10px;right:10px;width:auto;bottom:68px;display:none}
@@ -362,7 +362,7 @@ const M={
   acc:new THREE.MeshStandardMaterial({color:ACC,roughness:.6}),
   accGlow:new THREE.MeshStandardMaterial({color:ACC,emissive:ACC,emissiveIntensity:.9,roughness:.5}),
   glass:new THREE.MeshStandardMaterial({color:0xbfe9ff,roughness:.1,metalness:.1,transparent:true,opacity:.35}),
-  booth:new THREE.MeshStandardMaterial({color:0xd7fbe9,roughness:.2,transparent:true,opacity:.28,side:THREE.DoubleSide}),
+  booth:new THREE.MeshStandardMaterial({color:0xd7fbe9,roughness:.2,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}),
   window:new THREE.MeshStandardMaterial({color:0xcfe9ff,emissive:0xffe0a3,emissiveIntensity:0,roughness:.3}),
   yellow:new THREE.MeshStandardMaterial({color:0xfbbf24,roughness:.7}),
   rail:new THREE.MeshStandardMaterial({color:0x6b7280,roughness:.6,metalness:.4}),
