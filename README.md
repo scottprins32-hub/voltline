@@ -1,9 +1,14 @@
 # Voltline
 
-A live, playable 3D digital twin of an EV gigafactory, built as a single HTML file with Three.js from a CDN. No build step, no external models.
+A live, playable 3D EV gigafactory in a single HTML file: Three.js from a CDN, no build step, no external models.
 
-- Drag to pan, right-drag (or two-finger twist) to rotate, scroll or pinch to zoom.
-- Click any station, robot, cart or finished car to follow it.
-- Weather, automatic day/night, KPI cards, build tracker and a live floor table.
+**Live:** https://scottprins32-hub.github.io/voltline/
 
-Open `index.html` in any modern browser, or visit the GitHub Pages deployment.
+## What it does
+- A cutaway factory with a press hall, weld robots, paint booth, battery gantry, final assembly, test track, charging yard, rail dock and office block. Cars move station to station; carts give way to each other; a train unloads parts.
+- Drag to pan, right-drag or two-finger twist to rotate, scroll or pinch to zoom. Click any station, robot, cart or car to follow it.
+- Weather (clear, monsoon, winter fog, heatwave), an automatic sun cycle with night lighting, KPI cards, a build tracker and a live floor table.
+- **Idle game:** every tested car earns ⚡ credits. Unlock three product lines (Compact, Crossover, Hauler) and buy tiered upgrades that change the simulation: faster presses, quicker conveyor, premium paint, shorter battery drops, more carts, solar income. Progress saves in the browser and the line keeps earning while you are away.
+
+## Run locally
+Open `index.html` in a browser, or serve the folder with any static server.
