@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Gridleaf — wind & solar farm</title>
+<meta name="description" content="Gridleaf: a live 3D renewable energy farm you can run. World 07 of Voltline Worlds."><meta name="theme-color" content="#f3f4f6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%233DBE6E'/%3E%3Cpath d='M32 10v44M32 32l18-10M32 32 14 22' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<script src="meta.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
+const turbines=[],rows=[],pulses=[],clouds=[];let wind=7,sunF=1,batt=42,totalMW=0,energyAcc=0,subst,battStation,town,vanAgent,drone;
+createWorld({
+ id:'gridleaf',num:7,name:'Gridleaf',tag:'Wind & solar farm',site:'Kayathar ridge · Tamil Nadu',accent:'#3DBE6E',accentRgb:'61,190,110',accentInk:'#1f7a45',
+ wordmark:'Grid<b>leaf</b>',intro:'Eight turbines on a ridge, a solar field, a battery yard and the line to town. <b>Sell every megawatt-hour</b>, tier up the farm, bank Charter to open the next world.',
+ ldSteps:['reading the wind','tilting the panels','charging the bank','closing the breaker'],plantName:'Farm office',productLabel:'Power contracts',
+ sky:0xf1f5f0,groundStops:['#f3f7f1','#dde8dc','#bfd0bf'],pal:{wall:0xf6f2ea,asphalt:0xc9cfd3},temps:[31,24,12,43],wx:{rain:'Monsoon',fog:'Hill mist',heat:'Heatwave'},lamps:[[-20,-22],[20,-22],[30,6]],
+ overview:{t:[4,0,-2],z:52},introFrom:[-10,2,-26],
+ areas:{ridge:{num:'ST-01',label:'Wind ridge',t:[0,2,-24],z:22},solar:{num:'ST-02',label:'Solar field',t:[-16,0,6],z:20},storage:{num:'ST-03',label:'Storage',t:[29,0,7],z:14},subst:{num:'ST-04',label:'Substation',t:[52,0,3],z:16}},
+ kpis:[{label:'Output'},{label:'Capacity factor'},{label:'Battery'}],
+ products:{spot:{name:'Spot market',sub:'sell as generated',price:60,unlock:0,unit:'per MWh',svg:'<path d="M4 20 14 12l8 6 10-10 8 4" stroke="currentColor" stroke-width="3" fill="none"/>'},ppa:{name:'Industrial PPA',sub:'steady offtake · +40%',price:84,unlock:40000,unit:'per MWh',svg:'<rect x="6" y="8" width="32" height="14" rx="2" fill="currentColor" opacity=".9"/>'},h2:{name:'Green hydrogen offtake',sub:'electrolyser contract · 2×',price:120,unlock:220000,unit:'per MWh',svg:'<circle cx="22" cy="14" r="9" fill="currentColor" opacity=".9"/>'}},
+ upgrades:[{id:'blades',name:'Longer blades',fx:'+15% wind output per tier',cost:4000},{id:'track',name:'Panel trackers',fx:'+15% solar output per tier',cost:5000},{id:'bank',name:'Battery bank',fx:'Sells stored energy at night · +25 ⚡/s per tier',cost:6000},{id:'link',name:'Grid link',fx:'+10% price per MWh',cost:9000},{id:'turb',name:'Extra turbine',fx:'+1 turbine on the ridge per tier',cost:12000},{id:'drone',name:'Drone fleet',fx:'Faults fixed 40% faster',cost:7000},{id:'cast',name:'Forecasting',fx:'Halves the weather penalty',cost:8000}],
+ tabs:[{id:'turb',label:'Turbines',cols:['Turbine','Wind','Output','Hours','Status'],rows:c=>turbines.map(t=>({pick:{kind:'station',id:t.id},cells:[t.name,wind.toFixed(1)+' m/s',t.mw.toFixed(2)+' MW',Math.round(t.hours),t.status]})),meta:c=>turbines.filter(t=>t.status==='running').length+' spinning'},
+       {id:'rows',label:'Solar rows',cols:['Row','Shade','Output','Tilt','Status'],rows:c=>rows.map(r=>({pick:{kind:'station',id:r.id},cells:[r.name,Math.round(r.shade*100)+'%',r.mw.toFixed(2)+' MW',r.tilt+'°',r.mw>.05?'running':'idle']}))},
+       {id:'fleet',label:'Fleet',cols:['Unit','Task','Speed','Trips','Status'],rows:c=>c.agents.map(a=>({pick:{kind:'agent',agent:a},cells:[a.name,a.sub,(a.speed*3.6).toFixed(0)+' km/h',Math.floor(a.trips),a.status]}))}],
+ build(c){const {box,cyl,sph,M,world,stencil,lane,contact,tree,addStation,addAgent}=c;
+  // hills behind the ridge
+  for(const [x,z,r,h] of[[-40,-44,34,7],[0,-50,40,9],[42,-44,30,6],[-70,-10,26,5],[80,-20,30,6]]){const m=new THREE.Mesh(new THREE.SphereGeometry(r,18,10),new THREE.MeshStandardMaterial({color:0xcfe3cf,roughness:1,flatShading:true}));m.scale.y=h/r;m.position.set(x,-1,z);m.receiveShadow=true;m.castShadow=true;world.add(m)}
+  // ridge road + service road loop
+  lane(-50,-18,60,-18);lane(60,-18,60,24);lane(60,24,-50,24);lane(-50,24,-50,-18);
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.5,9,.14),M.white);blade.geometry.translate(0,4.5,0);
+  const addTurbine=(i,x)=>{const g=new THREE.Group();g.position.set(x,0,-26);world.add(g);cyl(g,.55,.9,14,M.white,0,0,0,14);contact(6,6,x,-26,.18);const nac=box(g,2.6,1.2,1.2,M.white,0,13.6,0);box(g,.4,.5,.9,M.acc,-1.3,13.9,0);const hub=new THREE.Group();hub.position.set(1.4,14.2,0);g.add(hub);sph(hub,.45,M.acc,0,0,0);for(let k=0;k<3;k++){const b=blade.clone();b.rotation.x=k*Math.PI*2/3;b.castShadow=true;hub.add(b)}hub.rotation.y=Math.PI/2;
+    const t=addStation({id:'wt'+i,name:`WTG-${String(i+1).padStart(2,'0')}`,type:'3.6 MW turbine',obj:g,pos:new THREE.Vector3(x,8,-26),hub,g,mw:0,rpm:0,hours:rnd(4000,21000),fault:0,x});turbines.push(t);return t};
+  for(let i=0;i<8;i++)addTurbine(i,-42+i*12);
+  c.addTurbine=addTurbine;
+  // solar field: 6 rows of 9 panels
+  for(let r=0;r<6;r++){const g=new THREE.Group();g.position.set(-16,0,-6+r*4.6);world.add(g);for(let k=0;k<9;k++){box(g,.3,1.2,.3,M.mid,-20+k*5,0,0);const p=box(g,4.6,.12,2.6,new THREE.MeshStandardMaterial({color:0x1e3a5f,roughness:.3,metalness:.6}),-20+k*5,1.1,0);p.rotation.x=-.35;p.userData.panel=1}
+    rows.push(addStation({id:'row'+r,name:`Row ${r+1}`,type:'240 kWp string',obj:g,pos:new THREE.Vector3(-16,1,-6+r*4.6),g,mw:0,shade:0,tilt:20}))}
+  stencil('ST-02 SOLAR FIELD',-16,20,16);stencil('ST-01 WIND RIDGE',0,-14,16);
+  // battery yard
+  {const g=new THREE.Group();world.add(g);box(g,20,.3,16,M.asphalt,29,0,7);for(let i=0;i<6;i++){box(g,5.2,2.6,2.4,i%2?M.white:M.acc,22+(i%3)*6.5,.3,3.5+Math.floor(i/3)*7);box(g,.5,.3,.1,M.accGlow,22+(i%3)*6.5,2.2,2.25+Math.floor(i/3)*7)}box(g,2.4,3.2,2.4,M.mid,37,.3,7);
+    battStation=addStation({id:'bank',name:'Battery yard',type:'40 MWh LFP',obj:g,pos:new THREE.Vector3(29,2,7)});stencil('ST-03 STORAGE',29,17.5,12)}
+  // substation + pylons + town
+  {const g=new THREE.Group();world.add(g);box(g,16,.3,14,M.asphalt,52,0,3);for(let i=0;i<3;i++){box(g,3,3,2,M.mid,46+i*5,.3,-1);cyl(g,.5,.5,1.2,M.white,46+i*5,3.3,-1,10)}for(let x=45;x<60;x+=4)for(let z=4;z<10;z+=4){box(g,.3,4.5,.3,M.mid,x,.3,z);sph(g,.3,M.acc,x,5,z)}box(g,4,3,5,M.white,57,.3,7);
+    subst=addStation({id:'sub',name:'Substation',type:'110 kV export',obj:g,pos:new THREE.Vector3(52,2,3)});stencil('ST-04 SUBSTATION',52,13.5,14)}
+  for(let i=0;i<4;i++){const x=64+i*9;const p=new THREE.Group();p.position.set(x,0,2);world.add(p);box(p,.5,16,.5,M.mid,0,0,0);box(p,5,.4,.4,M.mid,0,13,0);box(p,3.5,.4,.4,M.mid,0,10,0)}
+  town=new THREE.Group();town.position.set(104,0,4);world.add(town);for(let i=0;i<14;i++){const w=box(town,rnd(2.5,4),rnd(2,7),rnd(2.5,4),M.white,rnd(-12,12),0,rnd(-10,10));const win=box(town,.4,1,.2,M.window,w.position.x,1.5,w.position.z+2.1,{shadow:false});win.userData.win=1}
+  // ops building + lake + trees
+  box(world,9,3.2,6,M.wall,20,0,-13);box(world,9.6,.3,6.6,M.grey,20,3.2,-13);for(let z=-15;z<-11;z+=1.6){const w=box(world,.2,1.2,1.1,M.window,24.6,1,z,{shadow:false});w.userData.win=1}addStation({id:'ops',name:'Operations building',type:'SCADA · 12 staff',obj:null,pos:new THREE.Vector3(20,2,-13)});
+  const lake=new THREE.Mesh(new THREE.CircleGeometry(9,32),M.water);lake.rotation.x=-Math.PI/2;lake.position.set(-56,.06,12);world.add(lake);
+  for(const [x,z] of[[-62,-4],[-48,6],[-40,30],[40,30],[70,-10],[-66,22],[12,-34],[48,16]])tree(x,z,rnd(.8,1.3));
+  // energy lines (collector along ridge → substation; solar → battery → substation)
+  const lines={wind:[[-42,-21],[45,-21],[48,-2]],solar:[[-16,15],[18,15],[29,13],[29,10]],bank:[[37,7],[46,3]]};c.lines=lines;
+  for(const k in lines){const pts=lines[k];for(let i=0;i<pts.length-1;i++)lane(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],.06)}
+  for(let i=0;i<26;i++){const s=sph(world,.28,M.accGlow,0,.5,0);s.castShadow=false;pulses.push({s,line:['wind','wind','solar','bank'][i%4],t:Math.random()})}
+  // clouds
+  for(let i=0;i<4;i++){const g=new THREE.Group();g.position.set(rnd(-60,60),16,rnd(-20,28));world.add(g);for(let k=0;k<4;k++){const m=sph(g,rnd(3,5),new THREE.MeshStandardMaterial({color:0xffffff,transparent:true,opacity:.85,roughness:1}),rnd(-5,5),rnd(-1,1),rnd(-3,3));m.castShadow=true}clouds.push({g,v:rnd(.8,1.6)})}
+  // fleet: van on the loop, drone over the rows
+  {const g=new THREE.Group();world.add(g);box(g,2.8,1.3,1.5,M.white,0,.4,0);box(g,1,1,1.4,M.acc,.9,1.7,0);for(const [dx,dz] of[[-.9,-.8],[.9,-.8],[-.9,.8],[.9,.8]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.3,12),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.4,dz);g.add(w)}
+    vanAgent=addAgent({id:'van',name:'Service van',sub:'Turbine maintenance',g,pts:[[-50,24],[60,24],[60,-18],[-50,-18]],maxSpeed:6,lane:'road'})}
+  {const g=new THREE.Group();world.add(g);box(g,1.2,.25,1.2,M.dark,0,0,0);for(const [dx,dz] of[[-.7,-.7],[.7,-.7],[-.7,.7],[.7,.7]]){const r=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.05,10),M.acc);r.position.set(dx,.25,dz);g.add(r)}
+    drone=addAgent({id:'drone',name:'Inspection drone',sub:'Panel thermal survey',g,y:6,pts:[[-36,-6],[4,-6],[4,3],[-36,3],[-36,12],[4,12],[4,17],[-36,17]],maxSpeed:7,lane:'air',loop:false})}
+ },
+ apply(c){const u=c.G.up;c.windMul=1+.15*u.blades;c.solarMul=1+.15*u.track;c.passive=25*u.bank*(c.nightT>.5?1:.3);c.priceMul=1+.1*u.link;c.fixMul=1-.4*Math.min(1,u.drone)*(.5+.5*u.drone/3);c.castMul=u.cast?.5:1;while(turbines.length<8+u.turb)c.addTurbine(turbines.length,-42+turbines.length*12);},
+ priceMul:c=>c.priceMul||1,rate:c=>(totalMW/60)*c.price(c.G.active)+(c.passive||0),
+ tick(c,dt){const t=c.simT;wind=clamp(7+Math.sin(t*.05)*3+Math.sin(t*.37)*.8+(c.WX.name==='Monsoon'?3:c.WX.name==='Heatwave'?-2:0),1.5,16);
+  const day=1-c.nightT;sunF=day*(c.WX.name==='Clear'?1:c.WX.name==='Heatwave'?.95:.35);
+  // clouds drift and shade rows
+  clouds.forEach(cl=>{cl.g.position.x+=cl.v*dt;if(cl.g.position.x>80)cl.g.position.x=-80});
+  rows.forEach(r=>{let sh=0;for(const cl of clouds){const d=Math.hypot(cl.g.position.x-(-16),cl.g.position.z-r.pos.z);sh=Math.max(sh,clamp(1-d/16,0,1))}r.shade=lerp(r.shade,sh*.8,dt*2);r.mw=2.2*sunF*(1-r.shade)*c.solarMul;r.g.children.forEach(m=>{if(m.userData.panel)m.material.emissiveIntensity=0})});
+  let mw=rows.reduce((a,r)=>a+r.mw,0);
+  turbines.forEach(tb=>{if(tb.fault>0){tb.status='fault';tb.rpm=lerp(tb.rpm,0,dt);if(vanAgent.pos.distanceTo(new THREE.Vector2(tb.x,-18))<3){vanAgent.dwell=4*c.fixMul;vanAgent.dwellStatus='repairing';tb.fault-=dt*(1/ (4*c.fixMul));if(tb.fault<=0){tb.fault=0;tb.status='running';c.addAlert('ok',`${tb.name} back online`,'Pitch sensor replaced')}}tb.mw=0}
+    else{tb.status='running';const w=clamp((wind-3)/9,0,1);tb.mw=3.6*w*w*c.windMul*(1-.5*(1-c.castMul)*(c.WX.name!=='Clear'?1:0));tb.rpm=lerp(tb.rpm,4+w*12,dt);tb.hours+=dt/60}
+    tb.hub.rotation.x+=tb.rpm*dt*.5;mw+=tb.mw});
+  totalMW=mw;energyAcc+=mw/60*dt;const block=10;if(energyAcc>=block){energyAcc-=block;c.earn(Math.round(block*c.price(c.G.active)),subst.obj)}
+  batt=clamp(batt+(c.nightT>.5?-.6:.4)*dt*(1+c.G.up.bank*.3),5,100);
+  // random fault
+  if(Math.random()<dt*.012){const tb=turbines[Math.floor(Math.random()*turbines.length)];if(tb.fault===0){tb.fault=1;c.addAlert('bad',`${tb.name} pitch fault`,'Service van dispatched',{kind:'station',id:tb.id});vanAgent.target=tb}}
+  // pulses along lines (count scales with output)
+  const L=c.lines;pulses.forEach((p,i)=>{const sp=.06+totalMW/400;p.t+=dt*sp;if(p.t>1)p.t=0;const pts=L[p.line];const seg=Math.min(pts.length-2,Math.floor(p.t*(pts.length-1)));const f=p.t*(pts.length-1)-seg;const [x0,z0]=pts[seg],[x1,z1]=pts[seg+1];p.s.position.set(lerp(x0,x1,f),.5+Math.sin(p.t*20)*.1,lerp(z0,z1,f));p.s.visible=i<8+totalMW/3});
+  if(drone.status==='moving'&&Math.random()<dt*.2)c.burst(drone.g,1,.5,.5);
+ },
+ slow(c){const cap=totalMW/(turbines.length*3.6+rows.length*2.2)*100;c.kpi(0,`${totalMW.toFixed(1)}<small>MW</small>`,`wind <b>${wind.toFixed(1)} m/s</b> · sun ${Math.round(sunF*100)}%`,totalMW<8?'warn':'');c.spark(0,totalMW);c.kpi(1,`${cap.toFixed(0)}<small>%</small>`,`${turbines.filter(t=>t.status==='fault').length} turbines in fault`,cap<20?'warn':'');c.spark(1,cap);c.kpi(2,`${batt.toFixed(0)}<small>%</small>`,c.nightT>.5?'discharging to grid':'charging from solar',batt<15?'bad':'');c.spark(2,batt)},
+ detail(c,d){if(d.kind==='agent'){const a=d.agent;return{type:a.sub,status:a.status,level:a.status==='yielding'?'warn':'',stats:[['Speed',(a.speed*3.6).toFixed(0)+' km/h'],['Trips',Math.floor(a.trips)],['Task',a===vanAgent&&vanAgent.target?vanAgent.target.name:'patrol'],['Battery',a===drone?'71 %':'—']]}}
+  const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.hub)return{type:s.type,status:s.status,level:s.status==='fault'?'bad':'',stats:[['Output',s.mw.toFixed(2)+' MW'],['Rotor',s.rpm.toFixed(1)+' rpm'],['Wind',wind.toFixed(1)+' m/s'],['Run hours',Math.round(s.hours)],['Uptime',s.uptime.toFixed(1)+' %']],bar:s.mw/3.6*100};
+  if(s.tilt!==undefined)return{type:s.type,status:s.mw>.05?'generating':'idle',stats:[['Output',s.mw.toFixed(2)+' MW'],['Cloud shade',Math.round(s.shade*100)+' %'],['Tilt',s.tilt+'°'],['Soiling','2.1 %']],bar:s.mw/2.2*100};
+  if(s.id==='bank')return{type:s.type,status:c.nightT>.5?'discharging':'charging',stats:[['State of charge',batt.toFixed(0)+' %'],['Capacity',(40+8*c.G.up.bank)+' MWh'],['Cycles today','1.4'],['Temp','31 °C']],bar:batt};
+  if(s.id==='sub')return{type:s.type,status:'exporting',stats:[['Export',totalMW.toFixed(1)+' MW'],['Price',c.fmt(c.price(c.G.active))+' ⚡/MWh'],['Contract',c.def.products[c.G.active].name],['Frequency','50.02 Hz']]};
+  return{type:s.type,status:'open',stats:[['Staff on site','12'],['Shift','A']]}}
+});
+</script></body></html>

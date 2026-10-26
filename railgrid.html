@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Railgrid — metro rail control</title>
+<meta name="description" content="Railgrid: a live 3D metro you can run. World 06 of Voltline Worlds."><meta name="theme-color" content="#f3f4f6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2300A86B'/%3E%3Crect x='14' y='18' width='36' height='24' rx='6' fill='%23fff'/%3E%3Ccircle cx='24' cy='48' r='4' fill='%23fff'/%3E%3Ccircle cx='40' cy='48' r='4' fill='%23fff'/%3E%3C/svg%3E">
+<script src="meta.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
+const RX=44,RZ=24,DECK=6.5;const trains=[],stationsL=[],signals=[];let pax=0,paxH=0,onTime=97,depot;
+const ang=a=>[Math.cos(a)*RX,Math.sin(a)*RZ];const circ=Math.PI*(3*(RX+RZ)-Math.sqrt((3*RX+RZ)*(RX+3*RZ)));
+createWorld({
+ id:'railgrid',num:6,name:'Railgrid',tag:'Metro rail control',site:'Green Line · Loop section',accent:'#00A86B',accentRgb:'0,168,107',accentInk:'#066b47',
+ wordmark:'Rail<b>grid</b>',intro:'An elevated loop with four stations and a depot. <b>Trains run to a timetable; every boarded passenger pays a fare.</b> Tier up the line and bank Charter.',
+ ldSteps:['energising the third rail','rostering the drivers','clearing the signals','first departure'],plantName:'Control room',productLabel:'Fares',
+ sky:0xf2f4f6,groundStops:['#f5f6f8','#e3e6ea','#c8ccd3'],pal:{asphalt:0xbfc5cc},temps:[30,25,14,40],wx:{rain:'Monsoon',fog:'Smog',heat:'Heatwave'},lamps:[[-44,0],[44,0],[0,-24]],
+ overview:{t:[0,0,0],z:52},introFrom:[44,4,0],
+ areas:{s1:{num:'ST-01',label:'Central',t:[44,4,0],z:16},s2:{num:'ST-02',label:'Riverside',t:[0,4,24],z:16},s3:{num:'ST-03',label:'Tech Park',t:[-44,4,0],z:16},s4:{num:'ST-04',label:'Market',t:[0,4,-24],z:16},depot:{num:'ST-05',label:'Depot',t:[-30,2,-40],z:16}},
+ kpis:[{label:'Trains in service'},{label:'On-time'},{label:'Passengers per hour'}],
+ products:{std:{name:'Standard fare',sub:'single journey',price:4,unlock:0,unit:'per passenger',svg:'<rect x="8" y="8" width="28" height="14" rx="3" fill="currentColor" opacity=".9"/>'},card:{name:'Smart card',sub:'tap in · +25%',price:5,unlock:30000,unit:'per passenger',svg:'<rect x="8" y="6" width="28" height="18" rx="3" fill="currentColor" opacity=".9"/><rect x="12" y="11" width="8" height="6" fill="#fff"/>'},express:{name:'Airport express',sub:'premium service · 2.2×',price:9,unlock:180000,unit:'per passenger',svg:'<path d="M4 20h36l-6-8H14z" fill="currentColor" opacity=".9"/>'}},
+ upgrades:[{id:'train',name:'Extra train',fx:'+1 train on the loop per tier',cost:6000},{id:'dwell',name:'Platform doors',fx:'Dwell 20% shorter, safer boarding',cost:5000},{id:'cars',name:'Longer trains',fx:'+1 car · more passengers per stop',cost:9000},{id:'retail',name:'Station retail',fx:'+35 ⚡/s passive per tier',cost:7000},{id:'cbtc',name:'Signalling (CBTC)',fx:'Trains run 12% faster per tier',cost:11000},{id:'escal',name:'Escalators',fx:'+15% boarding per stop',cost:8000},{id:'night',name:'Night service',fx:'Full fares after dark',cost:10000}],
+ tabs:[{id:'trains',label:'Trains',cols:['Train','Next stop','Speed','Load','Status'],rows:c=>trains.map(t=>({pick:{kind:'station',id:t.id},cells:[t.name,t.next,(t.v*3.6).toFixed(0)+' km/h',Math.round(t.load/t.cap*100)+'%',t.status]})),meta:c=>trains.length+' in service'},
+       {id:'stations',label:'Stations',cols:['Station','Waiting','Boarded','Headway','Status'],rows:c=>stationsL.map(s=>({pick:{kind:'station',id:s.id},cells:[s.name,s.waiting,s.boarded,s.headway.toFixed(0)+' s',s.waiting>60?'crowded':'open']}))},
+       {id:'road',label:'Road traffic',cols:['Vehicle','Route','Speed','Trips','Status'],rows:c=>c.agents.map(a=>({pick:{kind:'agent',agent:a},cells:[a.name,a.sub,(a.speed*3.6).toFixed(0)+' km/h',Math.floor(a.trips),a.status]}))}],
+ build(c){const {box,cyl,M,world,stencil,lane,contact,tree,addStation,addAgent}=c;
+  // viaduct: pillars + deck segments around the ellipse
+  const N=72;for(let i=0;i<N;i++){const a=i/N*Math.PI*2,a2=(i+1)/N*Math.PI*2;const [x,z]=ang(a),[x2,z2]=ang(a2);const len=Math.hypot(x2-x,z2-z);const seg=box(world,len+.3,.8,4.4,M.white,(x+x2)/2,DECK-.8,(z+z2)/2);seg.rotation.y=-Math.atan2(z2-z,x2-x);const r=box(world,len+.3,.14,.2,M.rail,(x+x2)/2,DECK,(z+z2)/2);r.rotation.y=seg.rotation.y;if(i%3===0){cyl(world,.7,.9,DECK-.8,M.white,x,0,z,10);contact(5,5,x,z,.16)}
+    if(i%9===4){const g=new THREE.Group();g.position.set(x,DECK,z);g.rotation.y=seg.rotation.y;world.add(g);box(g,.2,2.4,.2,M.dark,0,0,2.6);const l=box(g,.5,.5,.3,M.accGlow,0,2.2,2.6,{shadow:false});signals.push({l,a:a,g})}}
+  // stations
+  const names=['Central','Riverside','Tech Park','Market'];[0,Math.PI/2,Math.PI,Math.PI*1.5].forEach((a,i)=>{const [x,z]=ang(a);const g=new THREE.Group();g.position.set(x,DECK,z);g.rotation.y=-Math.atan2(RX*Math.cos(a),-RZ*Math.sin(a))+Math.PI/2;world.add(g);box(g,16,.6,3,M.floor,0,0,4);box(g,16,.6,3,M.floor,0,0,-4);for(const dz of[-4,4]){box(g,.4,3.2,.4,M.mid,-6,.6,dz);box(g,.4,3.2,.4,M.mid,6,.6,dz)}box(g,17,.4,12,M.acc,0,3.8,0);
+    const base=new THREE.Group();base.position.set(x,0,z);base.rotation.y=g.rotation.y;world.add(base);box(base,10,DECK-.4,8,M.wall,0,0,9);for(let k=-3;k<=3;k+=2){const w=box(base,.2,1.2,1.2,M.window,5.1,2,9+k*1.1,{shadow:false});w.userData.win=1}box(base,3,1.2,6,M.grey,0,-.2,13);
+    stationsL.push(addStation({id:'st'+i,name:names[i],type:'Island platform · 2 sides',obj:g,pos:new THREE.Vector3(x,DECK+1,z),a,waiting:rnd(10,40),boarded:0,headway:0,lastT:0}))});
+  // depot spur
+  {const g=new THREE.Group();g.position.set(-30,0,-40);world.add(g);box(g,24,6,12,M.wall,0,0,0);box(g,24.6,.4,12.6,M.grey,0,6,0);box(g,6,5,.3,M.dark,6,0,6.1);for(const dz of[-3,0,3]){box(g,24,.14,.2,M.rail,0,.1,dz-.9);box(g,24,.14,.2,M.rail,0,.1,dz+.9)}depot=addStation({id:'depot',name:'Depot',type:'Stabling · wash plant',obj:g,pos:new THREE.Vector3(-30,3,-40)});stencil('ST-05 DEPOT',-30,-31,12)}
+  // river + bridge + roads + blocks
+  const river=new THREE.Mesh(new THREE.PlaneGeometry(220,12),M.water);river.rotation.x=-Math.PI/2;river.position.set(0,.02,36);world.add(river);box(world,14,.6,14,M.asphalt,10,0,36);
+  lane(-60,14,60,14);lane(60,14,60,-14);lane(60,-14,-60,-14);lane(-60,-14,-60,14);
+  for(let i=0;i<26;i++){const x=rnd(-64,64),z=rnd(-60,60);if(Math.hypot(x/RX,z/RZ)>.72&&Math.hypot(x/RX,z/RZ)<1.3)continue;if(Math.abs(z-36)<9||Math.abs(z+40)<10&&x<-14)continue;const h=rnd(3,14);const b=box(world,rnd(4,8),h,rnd(4,8),M.wall,x,0,z);for(let y=1.5;y<h-1;y+=2.5){const w=box(world,.2,1,1.4,M.window,x+b.geometry.parameters.width/2+.05,y,z,{shadow:false});w.userData.win=1}}
+  for(const [x,z] of[[-50,30],[50,-30],[-20,50],[30,52],[-55,-50],[58,46]])tree(x,z,rnd(.9,1.3));
+  // trains: param on loop
+  const addTrain=i=>{const g=new THREE.Group();world.add(g);const cars=[];for(let k=0;k<3;k++){const cg=new THREE.Group();g.add(cg);box(cg,7,2.4,2.4,M.white,0,0,0);box(cg,7.2,.4,2.5,M.acc,0,2.4,0);for(let w=-2.5;w<=2.5;w+=1.25){const wn=box(cg,1,.9,.1,M.window,w,1,1.25,{shadow:false});wn.userData.win=1;const wn2=box(cg,1,.9,.1,M.window,w,1,-1.25,{shadow:false});wn2.userData.win=1}cars.push(cg)}
+    const t=addStation({id:'tr'+i,name:`Train ${101+i}`,type:'3-car EMU',obj:g,pos:new THREE.Vector3(0,DECK+1,0),g,cars,s:i*circ/3,v:0,vmax:14,load:rnd(60,200),cap:600,stopT:0,next:'Central',status:'running',nextIdx:0});trains.push(t);return t};
+  for(let i=0;i<3;i++)addTrain(i);c.addTrain=addTrain;
+  // road traffic agents
+  const carG=col=>{const g=new THREE.Group();world.add(g);box(g,3.4,.8,1.6,new THREE.MeshStandardMaterial({color:col,roughness:.5}),0,.3,0);box(g,1.8,.7,1.4,M.glass,-.1,1.1,0,{shadow:false});for(const [dx,dz] of[[1.1,-.8],[1.1,.8],[-1.1,-.8],[-1.1,.8]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.3,10),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.36,dz);g.add(w)}return g};
+  [0x1f2937,0x0ea5e9,0xf59e0b,0xffffff,0xef4444,0x9ca3af].forEach((col,i)=>{const a=addAgent({id:'car'+i,name:['Taxi','Auto','Bus','Car','Van','Car'][i]+' '+(i+1),sub:'Ring road',g:carG(col),pts:[[-60,14],[60,14],[60,-14],[-60,-14]],maxSpeed:5+i*.6,lane:'road'});a.pos.set(-60+i*20,14);a.i=1});
+  stencil('GREEN LINE · LOOP',0,0,22,0,'#9aa3b2');
+ },
+ apply(c){const u=c.G.up;c.dwellMul=1-.2*u.dwell;c.capMul=1+.33*u.cars;c.passive=35*u.retail;c.vMul=1+.12*u.cbtc;c.boardMul=1+.15*u.escal;c.nightOk=!!u.night;while(trains.length<3+u.train)c.addTrain(trains.length);trains.forEach(t=>{t.cap=600*c.capMul;t.cars.forEach((cg,k)=>cg.visible=k<3+Math.min(1,u.cars));t.cars.forEach((cg,k)=>{cg.position.x=-7.5*k*(k<3?1:1)})})},
+ priceMul:c=>(c.nightT>.5&&!c.nightOk)?.6:1,rate:c=>trains.length*120/60*c.price(c.G.active)*(c.boardMul||1)+(c.passive||0),
+ tick(c,dt){const t=c.simT;const wxMul=c.WX.name==='Monsoon'?.8:1;
+  stationsL.forEach(s=>{s.waiting=clamp(s.waiting+dt*(1.6+Math.sin(t*.03+s.a)*.8)*(c.nightT>.5?.4:1),0,140)});
+  for(const tr of trains){
+    // nearest station ahead in param space
+    const sPos=stationsL.map(s=>{let d=(s.a/(Math.PI*2))*circ-tr.s;d=((d%circ)+circ)%circ;return{s,d}}).sort((a,b)=>a.d-b.d)[0];tr.next=sPos.s.name;
+    if(tr.stopT>0){tr.stopT-=dt;tr.v=0;tr.status='boarding';if(tr.stopT<=0){tr.status='running';tr.cars.forEach(cg=>cg.children.forEach(m=>{}))}}
+    else{const ahead=trains.map(o=>{if(o===tr)return 1e9;let d=o.s-tr.s;d=((d%circ)+circ)%circ;return d}).sort((a,b)=>a-b)[0];const brake=sPos.d<14?lerp(1.5,tr.vmax,sPos.d/14):tr.vmax;const target=Math.min(brake,ahead<16?Math.max(0,(ahead-8)/8)*tr.vmax:tr.vmax)*(c.vMul||1)*wxMul;tr.v=lerp(tr.v,target,dt*1.5);tr.s=(tr.s+tr.v*dt)%circ;tr.status=ahead<16?'holding':'running';
+      if(sPos.d<.4&&t-sPos.s.lastT>8){const st=sPos.s;st.lastT=t;const dwellT=6*(c.dwellMul||1);tr.stopT=dwellT;const alight=Math.min(tr.load,Math.round(tr.load*rnd(.2,.5)));tr.load-=alight;const board=Math.min(st.waiting,tr.cap-tr.load,Math.round(st.waiting*.7*(c.boardMul||1)));st.waiting-=board;tr.load+=board;st.boarded+=board;pax+=board;paxH+=board;st.headway=st.headway?lerp(st.headway,t-(st.prevT||t),.5):0;st.prevT=t;if(board>0)c.earn(Math.round(board*c.price(c.G.active)),st.obj);if(st.waiting>90)onTime=Math.max(80,onTime-.3)}}
+    // place cars along the loop
+    tr.cars.forEach((cg,k)=>{const sp=((tr.s-k*7.6)%circ+circ)%circ;const a=sp/circ*Math.PI*2;const [x,z]=ang(a);const a2=a+.02;const [x2,z2]=ang(a2);cg.position.set(x,DECK+.2+1.2,z);cg.rotation.y=-Math.atan2(z2-z,x2-x)});tr.g.position.set(0,0,0);tr.pos.set(tr.cars[0].position.x,DECK+2,tr.cars[0].position.z);tr.obj=tr.g}
+  signals.forEach(sg=>{const near=trains.some(tr=>{let d=(sg.a/(Math.PI*2))*circ-tr.s;d=((d%circ)+circ)%circ;return d<10||d>circ-6});sg.l.material=near?c.M.copper:c.M.accGlow});
+  if(Math.random()<dt*.008){const s=stationsL[Math.floor(Math.random()*4)];c.addAlert('warn',`${s.name}: escalator fault`,'Crowding on platform 2',{kind:'station',id:s.id});s.waiting+=25}
+  onTime=lerp(onTime,97.5,dt*.01)},
+ slow(c){c.kpi(0,`${trains.length}<small>/ ${trains.length}</small>`,`headway ≈ ${(circ/14/trains.length).toFixed(0)} s`,'');c.spark(0,trains.length);c.kpi(1,`${onTime.toFixed(1)}<small>%</small>`,`${stationsL.filter(s=>s.waiting>60).length} crowded platforms`,onTime<90?'bad':onTime<95?'warn':'');c.spark(1,onTime);paxH*=.97;const ph=Math.round(paxH*40);c.kpi(2,`${c.fmt(ph)}<small>/h</small>`,`${c.fmt(pax)} carried today`,ph<1500?'warn':'');c.spark(2,ph)},
+ detail(c,d){if(d.kind==='agent'){const a=d.agent;return{type:a.sub,status:a.status,level:a.status==='yielding'?'warn':'',stats:[['Speed',(a.speed*3.6).toFixed(0)+' km/h'],['Trips',Math.floor(a.trips)],['Yields',a.yield]]}}
+  const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.cars)return{type:s.type,status:s.status,level:s.status==='holding'?'warn':'',stats:[['Next stop',s.next],['Speed',(s.v*3.6).toFixed(0)+' km/h'],['Load',`${Math.round(s.load)} / ${Math.round(s.cap)}`],['Driver','ATO']],bar:s.load/s.cap*100};
+  if(s.waiting!==undefined)return{type:s.type,status:s.waiting>60?'crowded':'open',level:s.waiting>60?'warn':'',stats:[['Waiting',Math.round(s.waiting)],['Boarded today',s.boarded],['Headway',s.headway.toFixed(0)+' s'],['Fare',c.fmt(c.price(c.G.active))+' ⚡']],bar:s.waiting/140*100};
+  return{type:s.type,status:'open',stats:[['Stabled','2 trains'],['Wash plant','running']]}}
+});
+</script></body></html>

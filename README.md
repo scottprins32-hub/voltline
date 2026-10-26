@@ -1,14 +1,28 @@
-# Voltline
+# Voltline Worlds
 
-A live, playable 3D EV gigafactory in a single HTML file: Three.js from a CDN, no build step, no external models.
+Seventeen living 3D worlds from the World Prompt Pack, played as **one idle game**. Three.js from a CDN, no build step, no external models.
 
-**Live:** https://scottprins32-hub.github.io/voltline/
+**Live:** https://scottprins32-hub.github.io/voltline/ · **World map:** https://scottprins32-hub.github.io/voltline/hub.html
 
-## What it does
-- A cutaway factory with a press hall, weld robots, paint booth, battery gantry, final assembly, test track, charging yard, rail dock and office block. Cars move station to station; carts give way to each other; a train unloads parts.
-- Drag to pan, right-drag or two-finger twist to rotate, scroll or pinch to zoom. Click any station, robot, cart or car to follow it.
-- Weather (clear, monsoon, winter fog, heatwave), an automatic sun cycle with night lighting, KPI cards, a build tracker and a live floor table.
-- **Idle game:** every tested car earns ⚡ credits. Unlock three product lines (Compact, Crossover, Hauler) and buy tiered upgrades that change the simulation: faster presses, quicker conveyor, premium paint, shorter battery drops, more carts, solar income. Progress saves in the browser and the line keeps earning while you are away.
+## How the game works
+- Every world earns ⚡ credits on its own: tested cars, exported megawatt-hours, lifted containers, boarded passengers.
+- Spend ⚡ inside a world on products and tiered upgrades that change the simulation and add visible geometry.
+- Growing a world earns **Charter ★** (1 ★ per 1M ⚡ lifetime, 2 ★ for a fully upgraded world). Charter unlocks new worlds on the map, in five tiers from Home base to Orbital.
+- Every owned world keeps earning while you are away or in another world; income is collected when you return.
 
-## Run locally
-Open `index.html` in a browser, or serve the folder with any static server.
+## Worlds
+| # | World | Status |
+|---|-------|--------|
+| 17 | Voltline — EV gigafactory | playable, home base (`index.html`) |
+| 07 | Gridleaf — wind & solar farm | playable (`gridleaf.html`) |
+| 03 | Berthwise — container port | playable (`berthwise.html`) |
+| 06 | Railgrid — metro rail control | playable (`railgrid.html`) |
+| others | Gateflow, Dabba, Fieldmind, Coreline, Pulseway, Apex, Summit, Parkline, Leafline, Orbitline, Boundary, Siren, Redline | on the map, in construction |
+
+## Files
+- `hub.html` — the 3D world map: islands per tier, unlock and travel.
+- `kit.js` / `kit.css` — the shared world engine and skin. A new world is a content file of a few hundred lines.
+- `meta.js` — the shared save, Charter economy and offline income across worlds.
+- `index.html` — Voltline, the original hand-built world.
+
+Controls everywhere: drag to pan, right-drag or two-finger twist to rotate, scroll or pinch to zoom, click anything to follow it.
