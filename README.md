@@ -11,13 +11,27 @@ Seventeen living 3D worlds from the World Prompt Pack, played as **one idle game
 - Every owned world keeps earning while you are away or in another world; income is collected when you return.
 
 ## Worlds
-| # | World | Status |
-|---|-------|--------|
-| 17 | Voltline — EV gigafactory | playable, home base (`index.html`) |
-| 07 | Gridleaf — wind & solar farm | playable (`gridleaf.html`) |
-| 03 | Berthwise — container port | playable (`berthwise.html`) |
-| 06 | Railgrid — metro rail control | playable (`railgrid.html`) |
-| others | Gateflow, Dabba, Fieldmind, Coreline, Pulseway, Apex, Summit, Parkline, Leafline, Orbitline, Boundary, Siren, Redline | on the map, in construction |
+All 17 worlds from the pack are playable. Each is a content file on the shared kit:
+
+| # | World | File |
+|---|-------|------|
+| 01 | Gateflow — airport apron | `gateflow.html` |
+| 02 | Orbitline — spaceport | `orbitline.html` |
+| 03 | Berthwise — container port | `berthwise.html` |
+| 04 | Boundary — cricket stadium | `boundary.html` |
+| 05 | Dabba — cloud kitchen city | `dabba.html` |
+| 06 | Railgrid — metro rail | `railgrid.html` |
+| 07 | Gridleaf — wind & solar | `gridleaf.html` |
+| 08 | Coreline — AI data centre | `coreline.html` |
+| 09 | Leafline — tea estate | `leafline.html` |
+| 10 | Pulseway — hospital campus | `pulseway.html` |
+| 11 | Apex — racing circuit | `apex.html` |
+| 12 | Redline — Mars colony | `redline.html` |
+| 13 | Summit — ski resort | `summit.html` |
+| 14 | Parkline — theme park | `parkline.html` |
+| 15 | Fieldmind — smart farm | `fieldmind.html` |
+| 16 | Siren — emergency city | `siren.html` |
+| 17 | Voltline — EV gigafactory (home base, hand-built) | `index.html` |
 
 ## Files
 - `hub.html` — the 3D world map: islands per tier, unlock and travel.

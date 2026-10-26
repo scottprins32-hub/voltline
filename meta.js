@@ -16,9 +16,9 @@ const WORLDS=[
  {id:'parkline', num:14,name:'Parkline', tag:'Theme park',           accent:'#F43F5E',tier:4,cost:8, file:'parkline.html',status:'play',icon:'wheel'},
  {id:'leafline', num:9, name:'Leafline', tag:'Tea estate',           accent:'#2F8F5B',tier:4,cost:8, file:'leafline.html',status:'play',icon:'terrace'},
  {id:'orbitline',num:2, name:'Orbitline',tag:'Spaceport',            accent:'#7C5CFF',tier:5,cost:20,file:'orbitline.html',status:'play',icon:'rocket'},
- {id:'boundary', num:4, name:'Boundary', tag:'Cricket stadium',      accent:'#1E5EFF',tier:5,cost:20,file:'',status:'soon',icon:'stadium'},
- {id:'siren',    num:16,name:'Siren',    tag:'Emergency city',       accent:'#EF4444',tier:5,cost:20,file:'',status:'soon',icon:'tower'},
- {id:'redline',  num:12,name:'Redline',  tag:'Mars colony',          accent:'#14B8A6',tier:5,cost:20,file:'',status:'soon',icon:'dome'},
+ {id:'boundary', num:4, name:'Boundary', tag:'Cricket stadium',      accent:'#1E5EFF',tier:5,cost:20,file:'boundary.html',status:'play',icon:'stadium'},
+ {id:'siren',    num:16,name:'Siren',    tag:'Emergency city',       accent:'#EF4444',tier:5,cost:20,file:'siren.html',status:'play',icon:'tower'},
+ {id:'redline',  num:12,name:'Redline',  tag:'Mars colony',          accent:'#14B8A6',tier:5,cost:20,file:'redline.html',status:'play',icon:'dome'},
 ];
 const TIERS={1:'Home base',2:'Regional grid',3:'National network',4:'Continental',5:'Orbital'};
 let S=null;
