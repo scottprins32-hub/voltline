@@ -13,7 +13,7 @@ createWorld({
  ldSteps:['reading the wind','tilting the panels','charging the bank','closing the breaker'],plantName:'Farm office',productLabel:'Power contracts',
  sky:0xf1f5f0,groundStops:['#f3f7f1','#dde8dc','#bfd0bf'],pal:{wall:0xf6f2ea,asphalt:0xc9cfd3},temps:[31,24,12,43],wx:{rain:'Monsoon',fog:'Hill mist',heat:'Heatwave'},lamps:[[-20,-22],[20,-22],[30,6]],
  overview:{t:[4,0,-2],z:52},introFrom:[-10,2,-26],
- areas:{ridge:{num:'ST-01',label:'Wind ridge',t:[0,2,-24],z:22},solar:{num:'ST-02',label:'Solar field',t:[-16,0,6],z:20},storage:{num:'ST-03',label:'Storage',t:[29,0,7],z:14},subst:{num:'ST-04',label:'Substation',t:[52,0,3],z:16}},
+ areas:{ridge:{num:'SITE 01',label:'Wind ridge',t:[0,2,-24],z:22},solar:{num:'SITE 02',label:'Solar field',t:[-16,0,6],z:20},storage:{num:'SITE 03',label:'Storage',t:[29,0,7],z:14},subst:{num:'SITE 04',label:'Substation',t:[52,0,3],z:16}},
  kpis:[{label:'Output'},{label:'Capacity factor'},{label:'Battery'}],
  products:{spot:{name:'Spot market',sub:'sell as generated',price:400,unlock:0,unit:'per MWh',svg:'<path d="M4 20 14 12l8 6 10-10 8 4" stroke="currentColor" stroke-width="3" fill="none"/>'},ppa:{name:'Industrial PPA',sub:'steady offtake · +40%',price:560,unlock:60000,unit:'per MWh',svg:'<rect x="6" y="8" width="32" height="14" rx="2" fill="currentColor" opacity=".9"/>'},h2:{name:'Green hydrogen offtake',sub:'electrolyser contract · 2×',price:800,unlock:300000,unit:'per MWh',svg:'<circle cx="22" cy="14" r="9" fill="currentColor" opacity=".9"/>'}},
  upgrades:[{id:'blades',name:'Longer blades',fx:'+15% wind output per tier',cost:4000},{id:'track',name:'Panel trackers',fx:'+15% solar output per tier',cost:5000},{id:'bank',name:'Battery bank',fx:'Sells stored energy at night · +25 ⚡/s per tier',cost:6000},{id:'link',name:'Grid link',fx:'+10% price per MWh',cost:9000},{id:'turb',name:'Extra turbine',fx:'+1 turbine on the ridge per tier',cost:12000},{id:'drone',name:'Drone fleet',fx:'Faults fixed 40% faster',cost:7000},{id:'cast',name:'Forecasting',fx:'Halves the weather penalty',cost:8000}],
@@ -33,13 +33,13 @@ createWorld({
   // solar field: 6 rows of 9 panels
   for(let r=0;r<6;r++){const g=new THREE.Group();g.position.set(-16,0,-6+r*4.6);world.add(g);for(let k=0;k<9;k++){box(g,.3,1.2,.3,M.mid,-20+k*5,0,0);const p=box(g,4.6,.12,2.6,new THREE.MeshStandardMaterial({color:0x1e3a5f,roughness:.3,metalness:.6}),-20+k*5,1.1,0);p.rotation.x=-.35;p.userData.panel=1}
     rows.push(addStation({id:'row'+r,name:`Row ${r+1}`,type:'240 kWp string',obj:g,pos:new THREE.Vector3(-16,1,-6+r*4.6),g,mw:0,shade:0,tilt:20}))}
-  stencil('ST-02 SOLAR FIELD',-16,20,16);stencil('ST-01 WIND RIDGE',0,-14,16);
+  stencil('SITE 02 SOLAR FIELD',-16,20,16);stencil('SITE 01 WIND RIDGE',0,-14,16);
   // battery yard
   {const g=new THREE.Group();world.add(g);box(g,20,.3,16,M.asphalt,29,0,7);for(let i=0;i<6;i++){box(g,5.2,2.6,2.4,i%2?M.white:M.acc,22+(i%3)*6.5,.3,3.5+Math.floor(i/3)*7);box(g,.5,.3,.1,M.accGlow,22+(i%3)*6.5,2.2,2.25+Math.floor(i/3)*7)}box(g,2.4,3.2,2.4,M.mid,37,.3,7);
-    battStation=addStation({id:'bank',name:'Battery yard',type:'40 MWh LFP',obj:g,pos:new THREE.Vector3(29,2,7)});stencil('ST-03 STORAGE',29,17.5,12)}
+    battStation=addStation({id:'bank',name:'Battery yard',type:'40 MWh LFP',obj:g,pos:new THREE.Vector3(29,2,7)});stencil('SITE 03 STORAGE',29,17.5,12)}
   // substation + pylons + town
   {const g=new THREE.Group();world.add(g);box(g,16,.3,14,M.asphalt,52,0,3);for(let i=0;i<3;i++){box(g,3,3,2,M.mid,46+i*5,.3,-1);cyl(g,.5,.5,1.2,M.white,46+i*5,3.3,-1,10)}for(let x=45;x<60;x+=4)for(let z=4;z<10;z+=4){box(g,.3,4.5,.3,M.mid,x,.3,z);sph(g,.3,M.acc,x,5,z)}box(g,4,3,5,M.white,57,.3,7);
-    subst=addStation({id:'sub',name:'Substation',type:'110 kV export',obj:g,pos:new THREE.Vector3(52,2,3)});stencil('ST-04 SUBSTATION',52,13.5,14)}
+    subst=addStation({id:'sub',name:'Substation',type:'110 kV export',obj:g,pos:new THREE.Vector3(52,2,3)});stencil('SITE 04 SUBSTATION',52,13.5,14)}
   for(let i=0;i<4;i++){const x=64+i*9;const p=new THREE.Group();p.position.set(x,0,2);world.add(p);box(p,.5,16,.5,M.mid,0,0,0);box(p,5,.4,.4,M.mid,0,13,0);box(p,3.5,.4,.4,M.mid,0,10,0)}
   town=new THREE.Group();town.position.set(104,0,4);world.add(town);for(let i=0;i<14;i++){const w=box(town,rnd(2.5,4),rnd(2,7),rnd(2.5,4),M.white,rnd(-12,12),0,rnd(-10,10));const win=box(town,.4,1,.2,M.window,w.position.x,1.5,w.position.z+2.1,{shadow:false});win.userData.win=1}
   // ops building + lake + trees
