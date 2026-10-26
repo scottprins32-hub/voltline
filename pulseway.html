@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Pulseway — hospital campus operations</title>
+<meta name="description" content="Pulseway: a live 3D hospital campus you can run. World 10 of Voltline Worlds."><meta name="theme-color" content="#f3f4f6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230EA5E9'/%3E%3Cpath d='M26 14h12v12h12v12H38v12H26V38H14V26h12z' fill='%23fff'/%3E%3C/svg%3E">
+<script src="meta.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
+const beds=[],patients=[],ambulances=[],theatres=[];let caseSeq=30417,treated=0,waitSum=0,waitN=0,heli,heliState='away',heliT=-20,erQueue=0;
+const FLOW=['Arrived','Triage','Assessment','Treatment','Admitted','Discharged'];
+const PTS={bay:[-20,22],triage:[-14,14],scan:[-6,14],ward:[14,0],theatre:[-16,-8],exit:[6,26]};
+createWorld({
+ id:'pulseway',num:10,name:'Pulseway',tag:'Hospital campus operations',site:'Kauvery Mission · 320 beds',accent:'#0EA5E9',accentRgb:'14,165,233',accentInk:'#0369a1',
+ wordmark:'Pulse<b>way</b>',intro:'An emergency entrance, a cutaway ward floor, two theatres and a rooftop helipad. <b>Every patient treated and discharged pays.</b> Add beds and ambulances, bank Charter.',
+ ldSteps:['stocking the pharmacy','rostering nurses','testing the helipad lights','first ambulance'],plantName:'Operations centre',productLabel:'Care contracts',
+ sky:0xf2f6f9,groundStops:['#f5f7f9','#e2e8ee','#c7d1db'],pal:{wall:0xf9fafb,asphalt:0xbcc3cc,floor:0xe2e8f0},temps:[33,27,15,41],wx:{rain:'Monsoon',fog:'Fog',heat:'Heatwave'},lamps:[[-16,18],[14,0],[0,-20]],
+ overview:{t:[0,0,2],z:46},introFrom:[-18,2,20],
+ areas:{er:{num:'ST-01',label:'Emergency',t:[-16,1,20],z:16},wards:{num:'ST-02',label:'Wards',t:[14,1,0],z:16},ot:{num:'ST-03',label:'Theatres',t:[-16,2,-10],z:14},heli:{num:'ST-04',label:'Helipad',t:[14,18,-22],z:16},park:{num:'ST-05',label:'Parking',t:[36,2,22],z:16}},
+ kpis:[{label:'Beds available'},{label:'ER wait time'},{label:'Ambulances inbound'}],
+ products:{opd:{name:'Outpatient care',sub:'consult + scan',price:900,unlock:0,unit:'per case',svg:'<path d="M22 6v18M13 15h18" stroke="currentColor" stroke-width="5"/>'},ipd:{name:'Inpatient ward',sub:'admitted care · 2.7×',price:2400,unlock:70000,unit:'per case',svg:'<rect x="6" y="12" width="32" height="10" rx="2" fill="currentColor" opacity=".9"/>'},surg:{name:'Surgical',sub:'theatre cases · 7×',price:6500,unlock:350000,unit:'per case',svg:'<circle cx="22" cy="15" r="9" fill="currentColor" opacity=".9"/>'}},
+ upgrades:[{id:'amb',name:'Extra ambulance',fx:'+1 ambulance per tier',cost:6000},{id:'beds',name:'More beds',fx:'+4 ward beds per tier',cost:8000},{id:'triage',name:'Fast triage',fx:'Triage and assessment 20% faster',cost:7000},{id:'ot',name:'Second theatre',fx:'Treatment 25% faster per tier',cost:11000},{id:'heli',name:'Helipad ops',fx:'Helicopter cases pay 3×',cost:14000},{id:'pharm',name:'Pharmacy automation',fx:'+50 ⚡/s passive per tier',cost:7500},{id:'ups',name:'Backup power',fx:'Monsoon no longer slows the campus',cost:9000}],
+ tabs:[{id:'beds',label:'Beds',cols:['Bed','Ward','Case','Stay','Status'],rows:c=>beds.map(b=>({pick:{kind:'station',id:b.id},cells:[b.name,b.ward,b.p?'#'+b.p.id:'—',b.p?Math.round(b.p.stay)+' s':'—',b.p?'occupied':'open']})),meta:c=>beds.filter(b=>!b.p).length+' beds free'},
+       {id:'amb',label:'Ambulances',cols:['Unit','Task','Speed','Runs','Status'],rows:c=>c.agents.filter(a=>a.amb).map(a=>({pick:{kind:'agent',agent:a},cells:[a.name,a.sub,(a.speed*3.6).toFixed(0)+' km/h',Math.floor(a.trips),a.status]}))},
+       {id:'ot',label:'Theatres',cols:['Theatre','Case','Procedure','Elapsed','Status'],rows:c=>theatres.map(t=>({pick:{kind:'station',id:t.id},cells:[t.name,t.p?'#'+t.p.id:'—',t.p?t.p.proc:'—',t.p?Math.round(t.p.phT)+' s':'—',t.p?'in surgery':'open']}))}],
+ build(c){const {box,cyl,sph,M,world,stencil,lane,contact,tree,addStation,addAgent}=c;
+  // main tower + helipad
+  {const g=new THREE.Group();g.position.set(14,0,-22);world.add(g);box(g,22,16,16,M.wall,0,0,0);for(let y=1.6;y<15;y+=2.4)for(let k=-9;k<10;k+=2.4){const w=box(g,1.6,1.2,.2,M.window,k,y,8.1,{shadow:false});w.userData.win=1;const w2=box(g,.2,1.2,1.6,M.window,11.1,y,k,{shadow:false});w2.userData.win=1}box(g,23,.5,17,M.grey,0,16,0);
+    const pad=cyl(g,6,6,.3,M.dark,0,16.5,0,24);cyl(g,5.2,5.2,.1,M.white,0,16.8,0,24);cyl(g,4.6,4.6,.1,M.dark,0,16.85,0,24);box(g,1.2,.1,4,M.white,0,16.9,0);box(g,4,.1,1.2,M.white,0,16.9,0);for(let i=0;i<8;i++){const a=i/8*Math.PI*2;box(g,.4,.3,.4,M.accGlow,Math.cos(a)*5.6,16.8,Math.sin(a)*5.6,{shadow:false})}box(g,22,.6,.6,M.acc,0,15.2,8.2);contact(30,24,14,-22,.22);
+    addStation({id:'tower',name:'Main tower',type:'12 floors · 260 beds',obj:g,pos:new THREE.Vector3(14,8,-22)});addStation({id:'pad',name:'Helipad',type:'Rooftop · night lit',obj:null,pos:new THREE.Vector3(14,17,-22)});stencil('ST-04 HELIPAD · H',14,-10,10)}
+  // emergency entrance + bays
+  {const g=new THREE.Group();g.position.set(-16,0,16);world.add(g);box(g,24,5,10,M.wall,0,0,-4);box(g,24,.5,.6,M.acc,0,4.4,1.2);box(g,16,.4,8,M.white,0,4.6,6);for(const dx of[-7,0,7])box(g,.5,4.6,.5,M.mid,dx,0,9.5);for(const dx of[-7,0,7])box(g,3.6,.05,7,M.lane,dx,.1,6,{shadow:false});box(g,10,1.4,.3,M.acc,0,2.5,1.1);for(let k=-10;k<10;k+=3){const w=box(g,2,1.6,.2,M.window,k,1.6,1.05,{shadow:false});w.userData.win=1}
+    addStation({id:'er',name:'Emergency department',type:'3 bays · 14 triage chairs',obj:g,pos:new THREE.Vector3(-16,2,16)});stencil('ST-01 EMERGENCY',-16,27,14)}
+  // cutaway ward floor with beds
+  {const g=new THREE.Group();g.position.set(14,0,0);world.add(g);box(g,26,.3,16,M.floor,0,0,0);box(g,26,3.2,.5,M.wall,0,.3,-8);box(g,.5,3.2,16,M.wall,13,.3,0);box(g,26,.4,5,M.grey,0,3.5,-5.5);box(g,.5,.2,16,M.acc,-13,.3,0);
+    c.addBed=()=>{const i=beds.length;if(i>=20)return;const col=i%5,row=Math.floor(i/5);const x=-10+col*5,z=-5+row*4;const bg=new THREE.Group();bg.position.set(x,.3,z);g.add(bg);box(bg,1.6,.6,3,M.white,0,0,0);box(bg,1.6,.8,.3,M.mid,0,.6,-1.5);const sheet=box(bg,1.5,.15,2.2,M.acc,0,.6,.3);const b=addStation({id:'bed'+i,name:`Bed ${row+1}${String.fromCharCode(65+col)}`,type:'Ward bed · monitored',obj:bg,pos:new THREE.Vector3(14+x,1.5,z),ward:row<2?'Ward 2':'Ward 3',p:null,sheet,wx:14+x,wz:z});beds.push(b);return b};
+    for(let i=0;i<12;i++)c.addBed();stencil('ST-02 WARDS · CUTAWAY',14,10.5,16)}
+  // theatres, outpatient, pharmacy, parking, garden, roads
+  for(let i=0;i<2;i++){const g=new THREE.Group();g.position.set(-22+i*12,0,-10);world.add(g);box(g,9,5,8,M.white,0,0,0);box(g,9.4,.4,8.4,M.grey,0,5,0);const lamp=box(g,2.4,.3,2.4,M.accGlow,0,5.4,0,{shadow:false});box(g,9,.5,.4,M.acc,0,4.2,4.2);theatres.push(addStation({id:'ot'+i,name:`Theatre ${i+1}`,type:'Laminar flow · ortho/general',obj:g,pos:new THREE.Vector3(-22+i*12,3,-10),p:null,lamp}))}stencil('ST-03 THEATRES',-16,-3,12);
+  box(world,14,8,10,M.wall,-36,0,2);box(world,14.4,.4,10.4,M.grey,-36,8,2);for(let y=1.5;y<7;y+=2.4)for(let k=-5;k<6;k+=2.5){const w=box(world,1.4,1.2,.2,M.window,-36+k,y,7.1,{shadow:false});w.userData.win=1}addStation({id:'opd',name:'Outpatient block',type:'24 consult rooms',obj:null,pos:new THREE.Vector3(-36,4,2)});
+  box(world,8,3.6,6,M.white,2,0,20);box(world,8.4,.4,6.4,M.acc,2,3.6,20);addStation({id:'pharm',name:'Pharmacy',type:'Automated dispensing',obj:null,pos:new THREE.Vector3(2,2,20)});
+  {const g=new THREE.Group();g.position.set(36,0,22);world.add(g);for(let lv=0;lv<2;lv++){box(g,22,.4,16,M.floor,0,lv*3.4,0);for(const [dx,dz] of[[-10,-7],[10,-7],[-10,7],[10,7],[0,0]])box(g,.6,3.4,.6,M.mid,dx,lv*3.4+.4,dz)}box(g,22,.4,16,M.floor,0,6.8,0);for(let i=0;i<6;i++)box(g,3,.05,2,M.lane,-8+i*3.2,7.1,-4,{shadow:false});addStation({id:'parkg',name:'Parking structure',type:'3 levels · 420 bays',obj:g,pos:new THREE.Vector3(36,4,22)});stencil('ST-05 PARKING',36,33,12)}
+  {const gdn=new THREE.Mesh(new THREE.PlaneGeometry(18,14),new THREE.MeshStandardMaterial({color:0xcfe9c8,roughness:1}));gdn.rotation.x=-Math.PI/2;gdn.position.set(-6,.06,2);gdn.receiveShadow=true;world.add(gdn);for(const [x,z] of[[-12,-3],[0,-3],[-12,7],[0,7],[-6,2]])tree(x,z,.9);addStation({id:'garden',name:'Garden courtyard',type:'Visitor garden',obj:null,pos:new THREE.Vector3(-6,1,2)})}
+  lane(-56,34,56,34);lane(56,34,56,-44);lane(56,-44,-56,-44);lane(-56,-44,-56,34);lane(-56,26,-20,26);lane(-20,26,-20,22);
+  for(const [x,z] of[[-50,-36],[50,-36],[-50,28],[50,30]])tree(x,z,1.2);
+  // ambulances, cars, visitors, helicopter
+  const amb=i=>{const g=new THREE.Group();world.add(g);box(g,4.4,2,2,M.white,0,.4,0);box(g,1.6,1.4,1.9,M.white,2.4,.4,0);box(g,4.4,.5,.3,M.acc,0,1.4,1.05);box(g,.8,.3,1.2,new THREE.MeshStandardMaterial({color:0xef4444,emissive:0xef4444,emissiveIntensity:1.5}),0,2.4,0,{shadow:false});for(const [dx,dz] of[[1.4,-1],[1.4,1],[-1.4,-1],[-1.4,1]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.3,10),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.4,dz);g.add(w)}
+    const a=addAgent({id:'amb'+i,name:`Ambulance ${String.fromCharCode(65+i)}-${11+i}`,sub:'Emergency response',g,pts:[[-56,-44],[-56,26],[-20,26],[-20,22],[-20,26],[-56,26],[-56,34],[56,34],[56,-44]],maxSpeed:7,lane:'road',stopAt:[3],stopTime:5});a.amb=true;a.pos.set(-56+i*30,-44);a.i=1;ambulances.push(a);return a};
+  for(let i=0;i<2;i++)amb(i);c.addAmb=()=>amb(ambulances.length);
+  const car=col=>{const g=new THREE.Group();world.add(g);box(g,3.2,.9,1.5,col,0,.3,0);box(g,1.6,.7,1.3,M.glass,-.1,1.2,0,{shadow:false});for(const [dx,dz] of[[1,-.8],[1,.8],[-1,-.8],[-1,.8]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.3,10),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.32,dz);g.add(w)}return g};
+  [M.white,M.dark,M.mid,M.yellow].forEach((col,i)=>{const a=addAgent({id:'car'+i,name:'Car '+(i+1),sub:'City traffic',g:car(col),pts:[[56,-44],[-56,-44],[-56,34],[56,34]],maxSpeed:4.5+i*.4,lane:'road'});a.pos.set(56-i*25,-44);a.i=1});
+  for(let i=0;i<4;i++){const g=new THREE.Group();world.add(g);box(g,.6,1.2,.4,[M.acc,M.white,M.mid,M.yellow][i],0,.4,0);sph(g,.28,M.dark,0,1.85,0);const a=addAgent({id:'vis'+i,name:'Visitor '+(i+1),sub:'Garden walk',g,pts:[[-13,-4],[1,-4],[1,8],[-13,8]],maxSpeed:1.1+i*.1,lane:'walk',off:.2});a.pos.set(-13+i*3,-4);a.i=1}
+  {heli=new THREE.Group();world.add(heli);box(heli,4,1.6,1.6,M.white,0,.6,0);box(heli,3,.5,.5,M.white,-3.4,1.2,0);box(heli,.4,1.4,.3,M.acc,-4.8,1.2,0);box(heli,4,.5,1.2,M.glass,.6,1.2,0,{shadow:false});const rotor=box(heli,8,.08,.3,M.dark,0,2.4,0);heli.userData.rotor=rotor;for(const dz of[-.7,.7])box(heli,3,.15,.15,M.mid,0,0,dz);heli.position.set(14,60,-80);addStation({id:'heli',name:'Air ambulance',type:'EC145 · HEMS',obj:heli,pos:new THREE.Vector3(14,20,-22)})}
+  c.spawnPatient=(fromHeli)=>{const g=new THREE.Group();world.add(g);box(g,.6,1.3,.5,M.white,0,.3,0);sph(g,.25,M.dark,0,1.8,0);box(g,.5,.3,1.5,M.acc,0,0,0);const p={id:caseSeq++,g,ph:0,phT:0,from:fromHeli?[14,-30]:PTS.bay,pos:fromHeli?[14,-30]:[...PTS.bay],target:null,stay:0,proc:['appendectomy','ORIF femur','lap chole','hernia repair'][Math.floor(Math.random()*4)],heli:fromHeli,t0:c.simT};g.position.set(p.pos[0],0,p.pos[1]);patients.push(p);return p};
+ },
+ apply(c){const u=c.G.up;c.triMul=1-.2*u.triage;c.otMul=1-.25*u.ot;c.heliMul=u.heli?3:1;c.passive=50*u.pharm;c.upsOk=!!u.ups;while(ambulances.length<2+u.amb)c.addAmb();while(beds.length<12+4*u.beds)c.addBed()},
+ priceMul:c=>1,rate:c=>(ambulances.length*.6+beds.length*.15)/10*c.price(c.G.active)+(c.passive||0),
+ tick(c,dt){const t=c.simT;const slow=c.WX.name==='Monsoon'&&!c.upsOk?1.4:1;
+  // ambulances unload at the bay
+  ambulances.forEach(a=>{if(a.dwell>0&&a.dwellStatus!=='unloading'&&Math.hypot(a.pos.x-PTS.bay[0],a.pos.y-PTS.bay[1])<2){a.dwellStatus='unloading';c.spawnPatient(false);c.spawnPatient(Math.random()<.3?false:false);erQueue++}});
+  // helicopter mission
+  heliT+=dt;heli.userData.rotor.rotation.y+=dt*(heliState==='away'?0:30);
+  if(heliState==='away'&&heliT>0){heliState='approach';heliT=0;c.addAlert('warn','HEMS inbound','Air ambulance 4 min out',{kind:'station',id:'heli'})}
+  else if(heliState==='approach'){const f=clamp(heliT/14,0,1);heli.position.set(lerp(-70,14,smooth(f)),lerp(50,17.4,smooth(f)),lerp(-70,-22,smooth(f)));heli.rotation.y=.9;if(f>=1){heliState='onpad';heliT=0;c.spawnPatient(true)}}
+  else if(heliState==='onpad'){if(heliT>12){heliState='depart';heliT=0}}
+  else if(heliState==='depart'){const f=clamp(heliT/12,0,1);heli.position.set(lerp(14,90,f*f),lerp(17.4,60,smooth(f)),lerp(-22,-60,f));if(f>=1){heliState='away';heliT=-rnd(60,120)}}
+  // patient flow: Arrived → Triage → Assessment → Treatment → Admitted → Discharged
+  for(const p of patients){p.phT+=dt;const goTo=(pt,sp=1.4)=>{const dx=pt[0]-p.pos[0],dz=pt[1]-p.pos[1],d=Math.hypot(dx,dz);if(d<.2)return true;p.pos[0]+=dx/d*Math.min(d,sp*dt);p.pos[1]+=dz/d*Math.min(d,sp*dt);p.g.rotation.y=Math.atan2(-dz,dx);return false};
+    if(p.ph===0){if(p.heli){if(goTo([14,-8]))p.ph=1,p.phT=0}else if(goTo(PTS.triage)){p.ph=1;p.phT=0;erQueue=Math.max(0,erQueue-1)}}
+    else if(p.ph===1){if(p.phT>6*(c.triMul||1)*slow){p.ph=2;p.phT=0;waitSum+=t-p.t0;waitN++}}
+    else if(p.ph===2){if(goTo(PTS.scan)&&p.phT>8*(c.triMul||1)){p.ph=3;p.phT=0;p.surg=c.G.active==='surg'||Math.random()<.25}}
+    else if(p.ph===3){if(p.surg){const ot=theatres.find(o=>!o.p||o.p===p);if(ot){ot.p=p;if(goTo([ot.pos.x,ot.pos.z+5])){if(p.phT>14*(c.otMul||1)){ot.p=null;p.ph=4;p.phT=0}}}}else{const b=beds.find(x=>!x.p||x.p===p);if(b){b.p=p;if(goTo([b.wx,b.wz+2.2]))p.ph=4,p.phT=0}else{if(goTo([2,8]))p.ph=4,p.phT=0}}}
+    else if(p.ph===4){const b=beds.find(x=>x.p===p);if(b){p.g.visible=false;p.stay+=dt;if(p.stay>20*(c.otMul||1)){b.p=null;p.g.visible=true;p.pos=[b.wx,b.wz+2.2];p.ph=5;p.phT=0}}else if(p.phT>8){p.ph=5;p.phT=0}}
+    else if(p.ph===5){if(goTo(PTS.exit,1.8)){p.done=true;treated++;const v=Math.round(c.price(c.G.active)*(p.heli?(c.heliMul||1):1)*(p.surg&&c.G.active!=='surg'?2:1));c.earn(v,p.g);c.log('ok',`Case #${p.id} discharged${p.heli?' · HEMS':''}`);c.world.remove(p.g)}}
+    p.g.position.set(p.pos[0],0,p.pos[1])}
+  for(let i=patients.length-1;i>=0;i--)if(patients[i].done)patients.splice(i,1);
+  beds.forEach(b=>b.sheet.material=b.p?c.M.copper:c.M.acc);theatres.forEach(o=>o.lamp.visible=!!o.p);
+  if(Math.random()<dt*.01)c.addAlert('bad','Code blue · Ward 3','Rapid response team paged',{kind:'station',id:'bed7'})},
+ slow(c){const free=beds.filter(b=>!b.p).length;c.kpi(0,`${free}<small>/ ${beds.length}</small>`,`${patients.length} patients in flow`,free===0?'bad':free<3?'warn':'');c.spark(0,free);const w=waitN?waitSum/waitN:0;c.kpi(1,`${w.toFixed(0)}<small>min</small>`,`${erQueue} waiting in triage`,w>25?'bad':w>15?'warn':'');c.spark(1,w);const inb=ambulances.filter(a=>a.status==='moving').length;c.kpi(2,`${inb}`,heliState==='approach'?'HEMS inbound':`${treated} discharged today`,'');c.spark(2,inb)},
+ detail(c,d){if(d.kind==='agent'){const a=d.agent;return{type:a.sub,status:a.status,level:a.status==='yielding'?'warn':'',stats:[['Speed',(a.speed*3.6).toFixed(0)+' km/h'],['Runs',Math.floor(a.trips)],['Crew',a.amb?'2 paramedics':'—']]}}
+  const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.sheet)return{type:s.type,status:s.p?'occupied':'open',stats:[['Ward',s.ward],['Case',s.p?'#'+s.p.id:'—'],['Stay',s.p?Math.round(s.p.stay)+' s':'—'],['Monitoring','SpO₂ · ECG']]};
+  if(s.lamp)return{type:s.type,status:s.p?'in surgery':'open',stats:[['Case',s.p?'#'+s.p.id:'—'],['Procedure',s.p?s.p.proc:'—'],['Team','4 + anaesthetist']]};
+  if(s.id==='heli')return{type:s.type,status:heliState,stats:[['Altitude',Math.round(heli.position.y*10)+' ft'],['Patients flown',patients.filter(p=>p.heli).length]]};
+  return{type:s.type,status:'open',stats:[['Treated today',treated],['Shift','A']]}}
+});
+</script></body></html>
