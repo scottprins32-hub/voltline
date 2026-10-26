@@ -62,7 +62,7 @@ createWorld({
   const kerb=[[-50,34],[-20,34],[20,34],[50,34],[50,44],[-50,44]];['Taxi','Auto-rickshaw','Car','Airport bus','Taxi','Car'].forEach((n,i)=>{const col=[M.yellow,M.leaf,M.white,M.acc,M.yellow,M.dark][i];const a=addAgent({id:'ls'+i,name:`${n} ${i+1}`,sub:'Drop-off loop',g:veh(n,'',col,n==='Airport bus'?5:2.8,n==='Airport bus'?1.8:1.1,1.5),pts:kerb,maxSpeed:4+i*.4,lane:'road',stopAt:[1,2],stopTime:3});a.pos.set(-50+i*16,34);a.i=1});
  },
  apply(c){const u=c.G.up;c.turnMul=1-.15*u.turn;c.fuelMul=1-.4*Math.min(1,u.hydrant)*(.5+u.hydrant/6);c.priceMul=1+.1*u.bridge;c.passive=60*u.apron;c.ilsMul=u.ils?.5:1;c.nightOk=!!u.night;while(planes.length<2+u.plane&&planes.length<5){const p=c.mkPlane(planes.length,c.cols[planes.length%3]);p.t=-60*planes.length}},
- priceMul:c=>(c.priceMul||1)*((c.nightT>.5&&!c.nightOk)?.6:1),rate:c=>planes.length*c.price(c.G.active)/(260*(c.turnMul||1))+(c.passive||0),
+ priceMul:c=>(c.priceMul||1)*((c.nightT>.5&&!c.nightOk)?.6:1),rate:c=>planes.length*c.price(c.G.active)/(140*(c.turnMul||1))+(c.passive||0),
  tick(c,dt){const t=c.simT;const wxPen=(c.WX.name==='Clear'||c.WX.name==='Summer heat')?1:1+.6*(c.ilsMul||1);
   for(const p of planes){p.t+=dt;if(p.t<0){p.g.visible=false;continue}p.g.visible=true;
     switch(p.state){

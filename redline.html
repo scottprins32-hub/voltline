@@ -50,7 +50,7 @@ createWorld({
   for(let i=0;i<3;i++){const g=new THREE.Group();world.add(g);for(let k=0;k<5;k++){const s=sph(g,1+k*.5,new THREE.MeshStandardMaterial({color:0xd9a06c,transparent:true,opacity:.35,roughness:1}),rnd(-.5,.5),1+k*2.2,rnd(-.5,.5));s.castShadow=false}g.position.set(rnd(-60,60),0,rnd(-50,50));devils.push({g,v:rnd(1,2.5),a:rnd(0,6)})}
  },
  apply(c){const u=c.G.up;c.o2Mul=1+.25*u.moxie;c.passive=40*u.green;c.nukeOk=!!u.nuke;c.priceMul=1+.1*u.dish;while(rovers.length<2+u.rover)c.addRover(rovers.length);while(solarArr.length<3+u.solar)c.addArray();while(crew.length<4+2*u.dome)c.astro(['Dr. Alves','Eng. Novak','Dr. Reyes','Cdr. Osei','Dr. Zhang','Eng. Diaz'][crew.length-4],['Medic','Pilot','Chemist','XO','Physicist','Mechanic'][crew.length-4],crew.length)},
- priceMul:c=>c.priceMul||1,rate:c=>(24*(c.o2Mul||1)/60+rovers.length*180/90*.05)*c.price(c.G.active)+(c.passive||0),
+ priceMul:c=>c.priceMul||1,rate:c=>(rovers.length*1.2+2.5)*(c.o2Mul||1)*c.price(c.G.active)+(c.passive||0),
  tick(c,dt){const t=c.simT;const storm=c.WX.name==='Dust storm';sol=1412+Math.floor(t/480);
   power=solarArr.length*18*(1-c.nightT)*(storm&&!c.nukeOk?.25:1)+(c.nukeOk?40:0)+(c.nightT>.5?6:0);
   const o2rate=24/60*(c.o2Mul||1)*(power>20?1:.4);o2=clamp(o2+(o2rate-crew.length*.05)*dt*.2,10,100);

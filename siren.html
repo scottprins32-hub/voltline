@@ -7,7 +7,7 @@
 <script type="module">
 import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
 const LINES=[-36,-12,12,36];const units=[],incidents=[],buildings=[],stations={};let incSeq=2200,closed=0,respSum=0,respN=0,bays=[],flood=0;
-const PH=['Reported','Dispatched','En route','On scene','Contained','Closed'];
+const PH=['Reported','Dispatched','En route','On scene','Contained','Closed'];const C_MUD=new THREE.Color(0x8b7355);
 const nearLine=v=>LINES.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a);
 function route(a,b){const zi=nearLine((a[1]+b[1])/2);return[[a[0],a[1]],[a[0],zi],[b[0],zi],[b[0],b[1]]]}
 createWorld({
@@ -58,7 +58,7 @@ createWorld({
   units.forEach(u=>{const on=!!u.inc&&u.inc.ph<4;u.g.userData.lamp.material.emissiveIntensity=on?(Math.sin(t*14)>0?2.5:.2):0;if(on&&u.status==='moving'){for(const a of c.agents){if(!a.civ)continue;const d=Math.hypot(a.pos.x-u.pos.x,a.pos.y-u.pos.y);if(d<7&&a.dwell<=0){a.dwell=1.5;a.dwellStatus='pulling aside'}}}});
   Object.values(stations).forEach(s=>s.doors.forEach(d=>{const open=d.userData.open&&t-d.userData.open<8;d.position.y=lerp(d.position.y,open?4.6:2,dt*3)}));
   c.agents.forEach(a=>{if(a.civ&&flood>.5&&a.pos.y>20&&a.dwell<=0){a.dwell=2;a.dwellStatus='flooded road'}});
-  c.M.water.color.setHex(0x6fa9c7).lerp(new THREE.Color(0x8b7355),flood*.6);},
+  c.M.water.color.setHex(0x6fa9c7).lerp(C_MUD,flood*.6);},
  slow(c){const act=incidents.filter(i=>i.ph<5).length;c.kpi(0,`${act}`,`${closed} closed today · ${incidents.filter(i=>i.ph<5&&i.type==='Structure fire').length} fires`,act>4?'bad':act>2?'warn':'');c.spark(0,act);const avg=respN?respSum/respN:0;c.kpi(1,`${avg.toFixed(0)}<small>s</small>`,'target 300 s',avg>300?'bad':avg>200?'warn':'');c.spark(1,avg);const av=units.filter(u=>!u.inc).length;c.kpi(2,`${av}<small>/ ${units.length}</small>`,`${units.filter(u=>u.utype==='engine').length} engines · ${units.filter(u=>u.utype==='ambulance').length} medics · ${units.filter(u=>u.utype==='police').length} patrols`,av===0?'bad':'');c.spark(2,av)},
  detail(c,d){if(d.kind==='agent'){const a=d.agent;if(a.utype)return{type:`${a.utype} · ${a.home}`,status:a.inc?PH[a.inc.ph].toLowerCase():a.utype==='police'?'patrolling':'standby',level:a.inc?'warn':'',stats:[['Incident',a.inc?'#'+a.inc.id+' '+a.inc.type:'—'],['Speed',(a.speed*3.6).toFixed(0)+' km/h'],['Crew',a.utype==='engine'?'4':'2'],['Calls today',Math.floor(a.trips)]]};return{type:a.sub,status:a.status,stats:[['Speed',(a.speed*3.6).toFixed(0)+' km/h']]}}
   const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.fire!==undefined){const inc=incidents.filter(i=>i.b===s&&i.ph<5).at(-1);return{type:s.type,status:inc?inc.type+' · '+PH[inc.ph]:'quiet',level:s.fire?'bad':inc?'warn':'',stats:[['District',s.zone],['Incidents today',incidents.filter(i=>i.b===s).length],['Occupancy',s.zone==='downtown'?'high':'low']]}}

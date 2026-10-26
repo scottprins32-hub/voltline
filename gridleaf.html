@@ -66,7 +66,7 @@ createWorld({
   clouds.forEach(cl=>{cl.g.position.x+=cl.v*dt;if(cl.g.position.x>80)cl.g.position.x=-80});
   rows.forEach(r=>{let sh=0;for(const cl of clouds){const d=Math.hypot(cl.g.position.x-(-16),cl.g.position.z-r.pos.z);sh=Math.max(sh,clamp(1-d/16,0,1))}r.shade=lerp(r.shade,sh*.8,dt*2);r.mw=2.2*sunF*(1-r.shade)*c.solarMul;r.g.children.forEach(m=>{if(m.userData.panel)m.material.emissiveIntensity=0})});
   let mw=rows.reduce((a,r)=>a+r.mw,0);
-  turbines.forEach(tb=>{if(tb.fault>0){tb.status='fault';tb.rpm=lerp(tb.rpm,0,dt);if(vanAgent.pos.distanceTo(new THREE.Vector2(tb.x,-18))<3){vanAgent.dwell=4*c.fixMul;vanAgent.dwellStatus='repairing';tb.fault-=dt*(1/ (4*c.fixMul));if(tb.fault<=0){tb.fault=0;tb.status='running';c.addAlert('ok',`${tb.name} back online`,'Pitch sensor replaced')}}tb.mw=0}
+  turbines.forEach(tb=>{if(tb.fault>0){tb.status='fault';tb.rpm=lerp(tb.rpm,0,dt);if(Math.hypot(vanAgent.pos.x-tb.x,vanAgent.pos.y+18)<3){vanAgent.dwell=4*c.fixMul;vanAgent.dwellStatus='repairing';tb.fault-=dt*(1/ (4*c.fixMul));if(tb.fault<=0){tb.fault=0;tb.status='running';c.addAlert('ok',`${tb.name} back online`,'Pitch sensor replaced')}}tb.mw=0}
     else{tb.status='running';const w=clamp((wind-3)/9,0,1);tb.mw=3.6*w*w*c.windMul*(1-.5*(1-c.castMul)*(c.WX.name!=='Clear'?1:0));tb.rpm=lerp(tb.rpm,4+w*12,dt);tb.hours+=dt/60}
     tb.hub.rotation.x+=tb.rpm*dt*.5;mw+=tb.mw});
   totalMW=mw;energyAcc+=mw/60*dt;const block=10;if(energyAcc>=block){energyAcc-=block;c.earn(Math.round(block*c.price(c.G.active)),subst.obj)}

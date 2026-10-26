@@ -50,7 +50,7 @@ createWorld({
   {const g=new THREE.Group();world.add(g);box(g,2.8,1,1.5,M.white,0,.3,0);box(g,.6,.3,.4,M.copper,0,1.3,0);addAgent({id:'sec',name:'Security patrol',sub:'Perimeter',g,pts:[[-60,-50],[60,-50],[60,48],[-60,48]],maxSpeed:4,lane:'road'})}
  },
  apply(c){const u=c.G.up;c.pueBase=1.28-.06*u.liquid;c.priceMul=(1+.08*u.liquid)*(1+.1*u.fibre);c.schedMul=1-.15*u.sched;c.genOk=!!u.gen;c.ckpt=!!u.ckpt;c.passive=80*u.spot;const want=48+8*u.racks;while(racks.length<want){c.addRackTo(halls[racks.length%2]);if(racks.length>=80)break}},
- priceMul:c=>c.priceMul||1,rate:c=>racks.length/48*4*c.price(c.G.active)/40*(1/(c.schedMul||1))+(c.passive||0),
+ priceMul:c=>c.priceMul||1,rate:c=>racks.length/48*c.price(c.G.active)*(1/(c.schedMul||1))+(c.passive||0),
  tick(c,dt){const t=c.simT;const storm=c.WX.name==='Storm · gen test',hot=c.WX.name==='Heatwave';const thr=storm&&!c.genOk?.5:1;
   // job pipeline
   if(jobs.filter(j=>j.ph<5).length<racks.length/3&&Math.random()<dt*.9*thr){jobs.push({id:jobSeq++,model:MODELS[Math.floor(Math.random()*8)],gpus:[8,16,32,64][Math.floor(Math.random()*4)],ph:0,t:0,len:rnd(18,40)*(c.schedMul||1)});if(jobs.length>60)jobs.shift()}
