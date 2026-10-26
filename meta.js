@@ -7,7 +7,7 @@ const WORLDS=[
  {id:'berthwise',num:3, name:'Berthwise',tag:'Container port',       accent:'#0FA3A3',tier:2,cost:1, file:'berthwise.html',status:'play',icon:'crane'},
  {id:'railgrid', num:6, name:'Railgrid', tag:'Metro rail control',   accent:'#00A86B',tier:2,cost:1, file:'railgrid.html', status:'play',icon:'train'},
  {id:'gateflow', num:1, name:'Gateflow', tag:'Airport apron',        accent:'#FF6A1A',tier:3,cost:3, file:'gateflow.html',status:'play',icon:'plane'},
- {id:'dabba',    num:5, name:'Dabba',    tag:'Cloud kitchen city',   accent:'#E8452C',tier:3,cost:3, file:'',status:'soon',icon:'scooter'},
+ {id:'dabba',    num:5, name:'Dabba',    tag:'Cloud kitchen city',   accent:'#E8452C',tier:3,cost:3, file:'dabba.html',status:'play',icon:'scooter'},
  {id:'fieldmind',num:15,name:'Fieldmind',tag:'Smart farm',           accent:'#84CC16',tier:3,cost:3, file:'',status:'soon',icon:'silo'},
  {id:'coreline', num:8, name:'Coreline', tag:'AI data centre',       accent:'#22D3EE',tier:3,cost:3, file:'',status:'soon',icon:'rack'},
  {id:'pulseway', num:10,name:'Pulseway', tag:'Hospital campus',      accent:'#0EA5E9',tier:4,cost:8, file:'',status:'soon',icon:'cross'},
