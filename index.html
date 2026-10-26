@@ -758,7 +758,7 @@ try{const sv=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(sv&&typeof sv
 const fmtC=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'k':n>=1e3?(n/1e3).toFixed(2)+'k':Math.round(n).toString();
 const upCost=u=>Math.round(u.cost*Math.pow(3,GAME.up[u.id]));
 function carPrice(prod){return Math.round(PRODUCTS[prod].price*(1+.06*GAME.up.paint))}
-function incomeRate(){const spawn=21*GAME.mul.spawn;return carPrice(GAME.active)/spawn+GAME.solarRate}
+let earnedAcc=0,measured=0,measT=0;function incomeRate(){return measT>=45?measured:carPrice(GAME.active)/(21*GAME.mul.spawn)+GAME.solarRate}
 function save(){GAME.last=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify({credits:GAME.credits,lifetime:GAME.lifetime,shipped:GAME.shipped,active:GAME.active,unlocked:GAME.unlocked,up:GAME.up,last:GAME.last}))}catch(e){}
   try{GAME.maxed=UPGRADES.every(u=>GAME.up[u.id]>=3)?1:0;META.report('voltline',{credits:GAME.credits,lifetime:GAME.lifetime,rate:incomeRate(),up:GAME.up,unlocked:GAME.unlocked,active:GAME.active,maxed:GAME.maxed,shipped:GAME.shipped});document.getElementById('charterTxt').textContent=META.charter}catch(e){}}
 setInterval(save,5000);addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
@@ -942,7 +942,7 @@ const credTxt=document.getElementById('credTxt'),rateTxt=document.getElementById
 let shownCred=GAME.credits;
 function updateCred(){rateTxt.textContent='+'+fmtC(incomeRate())+'/s'}
 function floatAt(obj,text){obj.getWorldPosition(_v);_v.y+=2.4;_v.project(camera);const el=document.createElement('div');el.className='float';el.textContent=text;el.style.left=((_v.x+1)/2*innerWidth)+'px';el.style.top=((1-_v.y)/2*innerHeight)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1400)}
-function earn(c){const v=carPrice(c.prod||'compact');GAME.credits+=v;GAME.lifetime+=v;GAME.shipped++;floatAt(c.g,'+'+fmtC(v)+' ⚡');credBtn.classList.remove('bump');void credBtn.offsetWidth;credBtn.classList.add('bump');if(plant.classList.contains('open'))renderPlant()}
+function earn(c){const v=carPrice(c.prod||'compact');earnedAcc+=v;GAME.credits+=v;GAME.lifetime+=v;GAME.shipped++;floatAt(c.g,'+'+fmtC(v)+' ⚡');credBtn.classList.remove('bump');void credBtn.offsetWidth;credBtn.classList.add('bump');if(plant.classList.contains('open'))renderPlant()}
 const plant=document.getElementById('plant');
 function openPlant(o){plant.classList.toggle('open',o);if(o){if(sel)deselect();renderPlant()}if(isMobile)document.querySelectorAll('.mob-tabs button').forEach(x=>x.classList.toggle('on',x.dataset.mob===(o?'plant':'none')))}
 credBtn.onclick=()=>openPlant(!plant.classList.contains('open'));document.getElementById('pClose').onclick=()=>openPlant(false);
@@ -1105,7 +1105,7 @@ function updateLineMap(tc){lmTick++;if(lmTick%4)return;const parts=[];
   lmCars.innerHTML=parts.join('');
   const bays=lineMap.querySelectorAll('.bay');yardSlots.forEach((s,i)=>bays[i]?.classList.toggle('full',!!s.car));
   if(tc){lineMap.querySelectorAll('.gate').forEach((g,i)=>{g.classList.toggle('done',tc.stage>i);g.classList.toggle('now',tc.stage===i&&tc.mode==='line')})}}
-let uiTick=0;function updateUISlow(dt){if(GAME.solarRate){GAME.credits+=GAME.solarRate*dt;GAME.lifetime+=GAME.solarRate*dt}uiTick+=dt;if(uiTick<1)return;uiTick=0;kpi.takt=clamp(kpi.takt+rnd(-.4,.4),64,74);kpi.taktH.push(kpi.takt);if(kpi.taktH.length>40)kpi.taktH.shift();if(Math.random()<.2){kpi.fpy=clamp(kpi.fpy+rnd(-.3,.3)+((kpi.fpyBase||97.2)-kpi.fpy)*.1,94,99.6);kpi.fpyH.push(kpi.fpy);if(kpi.fpyH.length>40)kpi.fpyH.shift()}
+let uiTick=0;function updateUISlow(dt){if(GAME.solarRate){GAME.credits+=GAME.solarRate*dt;GAME.lifetime+=GAME.solarRate*dt;earnedAcc+=GAME.solarRate*dt}uiTick+=dt;if(uiTick<1)return;const win=uiTick;uiTick=0;measT+=win;const inst=earnedAcc/win;earnedAcc=0;measured=measT<45?Math.max(measured,inst):lerp(measured,inst,.04);updateCred();kpi.takt=clamp(kpi.takt+rnd(-.4,.4),64,74);kpi.taktH.push(kpi.takt);if(kpi.taktH.length>40)kpi.taktH.shift();if(Math.random()<.2){kpi.fpy=clamp(kpi.fpy+rnd(-.3,.3)+((kpi.fpyBase||97.2)-kpi.fpy)*.1,94,99.6);kpi.fpyH.push(kpi.fpy);if(kpi.fpyH.length>40)kpi.fpyH.shift()}
   stations.forEach(s=>{s.uptime=clamp((s.uptime??97.4)+rnd(-.05,.05),92,99.9)});
   if(Math.random()<.04){const r=robots[Math.floor(Math.random()*6)];if(r.st){addAlert('warn',`${r.st.name} tip wear`,'Cap change due in 40 welds',{kind:'station',id:r.st.id})}}
   if(Math.random()<.02){kpi.rework++;addAlert('bad','Paint defect flagged','Orange peel on rear quarter · rework lane',{kind:'station',id:'paint'})}
