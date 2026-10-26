@@ -30,7 +30,7 @@ function load(){if(S)return S;try{S=JSON.parse(localStorage.getItem(KEY)||'null'
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function world(id){load();return S.worlds[id]||(S.worlds[id]={owned:false,credits:0,lifetime:0,rate:0,last:Date.now(),charterFrom:0,maxed:0,visits:0})}
 const def=id=>WORLDS.find(w=>w.id===id);
-/* Charter: 1 ★ per 1M lifetime credits in a world, +2 ★ for each world where every upgrade is maxed, +1 ★ per unlocked world as a welcome grant */
+/* Charter: 1 ★ per 1M lifetime credits in a world, +2 ★ for each world where every upgrade is maxed */
 function charterOf(w){return Math.floor((w.lifetime||0)/1e6)+(w.maxed?2:0)}
 function report(id,data){const w=world(id);Object.assign(w,data);w.last=Date.now();const c=charterOf(w);if(c>w.charterFrom){S.charter+=c-w.charterFrom;w.charterFrom=c}save();return w}
 function offline(id){const w=world(id);const away=Math.min(4*3600,(Date.now()-(w.last||Date.now()))/1000);if(away<90||!w.rate)return{gain:0,away};const gain=Math.round(away*w.rate*.6);w.credits+=gain;w.lifetime+=gain;w.last=Date.now();save();return{gain,away}}
