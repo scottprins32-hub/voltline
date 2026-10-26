@@ -1,7 +1,7 @@
 :root{--accent:#10B981;--accent-rgb:16,185,129;--accent-2:#059669}
 
 :root{
-  --accent:var(--accent); --accent-2:#059669; --accent-soft:rgba(var(--accent-rgb),.14);
+  --accent:#10B981; --accent-2:#059669; --accent-soft:rgba(var(--accent-rgb),.14);
   --bg:#f3f4f6; --ink:#0f172a; --ink-2:#475569; --ink-3:#64748b; --accent-ink:#047857;
   --glass:rgba(255,255,255,.62); --glass-strong:rgba(255,255,255,.82); --line:rgba(15,23,42,.08);
   --shadow:0 10px 30px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.06);
