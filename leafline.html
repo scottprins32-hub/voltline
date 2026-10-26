@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Leafline — tea estate</title>
+<meta name="description" content="Leafline: a live 3D tea estate you can run. World 09 of Voltline Worlds."><meta name="theme-color" content="#f3f4f6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232F8F5B'/%3E%3Cpath d='M18 46c0-16 10-28 28-30-2 18-12 28-28 30z' fill='%23fff'/%3E%3C/svg%3E">
+<script src="meta.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
+const plots=[],pickers=[],batches=[],mists=[];let shed,factory,tractor,drone,plucked=0,output=0,grade=82,batchSeq=118,stacks=[];
+const PH=['Plucked','Weighed','Withered','Rolled','Fermented','Dried'];
+const hY=(x,z)=>Math.max(0,22-Math.hypot(x*.6,z+40)*.42);
+createWorld({
+ id:'leafline',num:9,name:'Leafline',tag:'Tea estate in the hills',site:'Kotagiri estate · 1,900 m',accent:'#2F8F5B',accentRgb:'47,143,91',accentInk:'#1f6b43',
+ wordmark:'Leaf<b>line</b>',intro:'Terraced tea on a misty hillside, a weighing shed and a factory with drying racks. <b>Every kilo plucked, weighed and dried pays by grade.</b> Add pickers, bank Charter.',
+ ldSteps:['lifting the mist','waking the pickers','firing the dryer','first basket'],plantName:'Estate office',productLabel:'Tea grades',
+ sky:0xeef4ef,groundStops:['#e6f0e4','#cfe0cb','#a9c4a6'],pal:{wall:0xf8f4ea,asphalt:0xb9ad94,floor:0xe7e0cf,water:0x8ec6d6},temps:[21,17,4,26],wx:{rain:'Monsoon mist',fog:'Winter frost',heat:'Harvest sunshine'},lamps:[[-20,-10],[20,-10],[0,24]],
+ overview:{t:[0,4,-6],z:50},introFrom:[-20,8,-26],
+ areas:{upper:{num:'ST-01',label:'Upper slopes',t:[0,12,-30],z:22},lower:{num:'ST-02',label:'Lower slopes',t:[0,4,-6],z:22},shed:{num:'ST-03',label:'Weighing shed',t:[-30,2,14],z:14},factory:{num:'ST-04',label:'Factory',t:[26,2,20],z:18}},
+ kpis:[{label:'Leaf plucked today'},{label:'Factory output'},{label:'Quality grade'}],
+ products:{ctc:{name:'CTC grade',sub:'bulk auction · ₹160/kg',price:420,unlock:0,unit:'per kg dried',svg:'<circle cx="22" cy="15" r="9" fill="currentColor" opacity=".9"/>'},orth:{name:'Orthodox whole leaf',sub:'export · +70%',price:700,unlock:60000,unit:'per kg dried',svg:'<path d="M12 24c0-10 6-16 18-18-2 12-8 18-18 18z" fill="currentColor" opacity=".9"/>'},tips:{name:'Silver tips',sub:'speciality · 4×',price:1700,unlock:300000,unit:'per kg dried',svg:'<path d="M22 4l4 10 10 2-8 7 2 10-8-5-8 5 2-10-8-7 10-2z" fill="currentColor" opacity=".9"/>'}},
+ upgrades:[{id:'pick',name:'Extra picker group',fx:'+1 group on the rows per tier',cost:4500},{id:'prune',name:'Pruning cycle',fx:'+15% leaf per plot per tier',cost:5000},{id:'wither',name:'Withering troughs',fx:'Factory 20% faster per tier',cost:7000},{id:'drone',name:'Spray drone',fx:'Quality grade +4 per tier',cost:6000},{id:'stay',name:'Estate bungalow stays',fx:'+40 ⚡/s passive per tier',cost:6500},{id:'frost',name:'Frost fans',fx:'Winter frost no longer halves plucking',cost:8000},{id:'organic',name:'Organic certification',fx:'+12% price per kg',cost:9000}],
+ tabs:[{id:'plots',label:'Plots',cols:['Plot','Slope','Flush','Yield','Status'],rows:c=>plots.map(p=>({pick:{kind:'station',id:p.id},cells:[p.name,p.upper?'upper':'lower',Math.round(p.flush*100)+'%',p.kg.toFixed(0)+' kg',p.flush>.6?'ready':p.flush>.3?'growing':'plucked']})),meta:c=>plucked.toFixed(0)+' kg today'},
+       {id:'workers',label:'Workers',cols:['Group','Task','Basket','Trips','Status'],rows:c=>c.agents.map(a=>({pick:{kind:'agent',agent:a},cells:[a.name,a.sub,a.basket!==undefined?a.basket.toFixed(0)+' kg':'—',Math.floor(a.trips),a.status]}))},
+       {id:'batches',label:'Batches',cols:['Batch','Stage','Leaf','Moisture','Status'],rows:c=>batches.slice(-8).reverse().map(b=>({pick:{kind:'station',id:'factory'},cells:['B'+b.id,PH[b.ph],b.kg.toFixed(0)+' kg',Math.round(b.moist)+'%',b.ph===5?'ok':'running']}))}],
+ build(c){const {box,cyl,sph,M,world,stencil,lane,contact,tree,addStation,addAgent}=c;
+  const geo=new THREE.PlaneGeometry(170,150,50,44);geo.rotateX(-Math.PI/2);const pos=geo.attributes.position;for(let i=0;i<pos.count;i++)pos.setY(i,hY(pos.getX(i),pos.getZ(i))+Math.sin(pos.getX(i)*.25)*.3);geo.computeVertexNormals();
+  const hill=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x9ec98f,roughness:1,flatShading:true}));hill.receiveShadow=true;hill.castShadow=true;world.add(hill);
+  // terraces: arcs of tea rows following contours
+  const bush=new THREE.MeshStandardMaterial({color:0x2f8f5b,roughness:1});let pi=0;
+  for(let ring=0;ring<6;ring++){const R=14+ring*7;for(let s=0;s<3;s++){const a0=Math.PI*.15+s*Math.PI*.235,a1=a0+Math.PI*.2;const g=new THREE.Group();world.add(g);const segs=10;const pts=[];for(let k=0;k<=segs;k++){const a=lerp(a0,a1,k/segs);const x=Math.cos(a)*R*1.6,z=-40+Math.sin(a)*R;pts.push([x,z])}
+      for(let k=0;k<segs;k++){const [x0,z0]=pts[k],[x1,z1]=pts[k+1];const y0=hY(x0,z0),y1=hY(x1,z1);const m=new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(x1-x0,z1-z0)+.3,1.1,2.6),bush);m.position.set((x0+x1)/2,(y0+y1)/2+.6,(z0+z1)/2);m.lookAt(x1,y1+.6,z1);m.rotateY(Math.PI/2);m.castShadow=true;m.receiveShadow=true;g.add(m);const t=new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(x1-x0,z1-z0)+.3,.3,3.4),new THREE.MeshStandardMaterial({color:0x8a6a44,roughness:1}));t.position.copy(m.position);t.position.y-=.6;t.rotation.copy(m.rotation);g.add(t)}
+      const mid=pts[5];plots.push(addStation({id:'p'+pi,name:`Plot ${String.fromCharCode(65+ring)}${s+1}`,type:`Terrace · ${(R*.25).toFixed(1)} ha`,obj:g,pos:new THREE.Vector3(mid[0],hY(mid[0],mid[1])+2,mid[1]),pts,flush:rnd(.3,1),kg:0,upper:ring<3,rows:g.children.filter(m=>m.material===bush)}));pi++}}
+  stencil('ST-01 UPPER SLOPES',0,-16,16,0,'#5b7a5e');stencil('ST-02 LOWER SLOPES',0,4,16,0,'#5b7a5e');
+  // estate roads (arcs), shade trees, eucalyptus
+  for(const R of[30,52]){const a0=Math.PI*.12,a1=Math.PI*.88;const n=16;for(let k=0;k<n;k++){const a=lerp(a0,a1,k/n),b=lerp(a0,a1,(k+1)/n);lane(Math.cos(a)*R*1.6,-40+Math.sin(a)*R,Math.cos(b)*R*1.6,-40+Math.sin(b)*R,.08)}}
+  for(let i=0;i<14;i++){const a=rnd(.3,2.8),R=rnd(16,50);const x=Math.cos(a)*R*1.6,z=-40+Math.sin(a)*R;const g=tree(x,z,rnd(.9,1.4));g.position.y=hY(x,z)}
+  for(let i=0;i<16;i++){const x=rnd(-80,80),z=rnd(-60,40);if(Math.hypot(x*.6,z+40)<48)continue;const g=new THREE.Group();g.position.set(x,hY(x,z),z);world.add(g);cyl(g,.2,.35,9,new THREE.MeshStandardMaterial({color:0xd9cbb5}),0,0,0,7);const cr=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,1),new THREE.MeshStandardMaterial({color:0x7fb08a,roughness:1,flatShading:true}));cr.position.y=9.5;cr.castShadow=true;g.add(cr)}
+  // cottages, weighing shed, factory, waterfall + stream
+  for(const [x,z] of[[-46,26],[-40,30],[-34,34],[40,30],[46,26]]){const g=new THREE.Group();g.position.set(x,hY(x,z),z);world.add(g);box(g,4,2.6,3.5,M.wall,0,0,0);const r=box(g,4.6,1.4,4,new THREE.MeshStandardMaterial({color:0xb5432b}),0,2.6,0);r.scale.y=.8;const w=box(g,.9,.8,.15,M.window,0,.8,1.8,{shadow:false});w.userData.win=1}
+  {const g=new THREE.Group();g.position.set(-30,hY(-30,14),14);world.add(g);box(g,10,3.4,7,M.wall,0,0,0);box(g,10.6,.4,7.6,M.grey,0,3.4,0);box(g,10,.4,.5,M.acc,0,2.8,3.6);box(g,2,1.2,1.4,M.dark,3,0,4.2);box(g,.3,1.4,.3,M.mid,2.2,1.2,4.2);shed=addStation({id:'shed',name:'Weighing shed',type:'Platform scale · 500 kg',obj:g,pos:new THREE.Vector3(-30,hY(-30,14)+2,14)});stencil('ST-03 WEIGHING SHED',-30,24,14,0,'#5b7a5e')}
+  {const g=new THREE.Group();g.position.set(26,hY(26,20),20);world.add(g);box(g,22,7,14,M.wall,0,0,0);box(g,22.6,.5,14.6,M.grey,0,7,0);box(g,22,.6,.6,M.acc,0,5.8,7.2);for(const dx of[-6,2]){cyl(g,.9,1.1,11,new THREE.MeshStandardMaterial({color:0xb5432b}),dx,0,-4,12)}for(let k=0;k<4;k++){box(g,3,.2,8,M.mid,12.5+k*1.2,2+k*.5,0)}for(let k=-8;k<=8;k+=4){const w=box(g,2,1.4,.2,M.window,k,2.2,7.1,{shadow:false});w.userData.win=1}
+    factory=addStation({id:'factory',name:'Kotagiri tea factory',type:'Withering · rolling · drying',obj:g,pos:new THREE.Vector3(26,hY(26,20)+4,20),stacks:[new THREE.Vector3(20,hY(26,20)+11.5,16),new THREE.Vector3(28,hY(26,20)+11.5,16)]});stencil('ST-04 FACTORY',26,32,10,0,'#5b7a5e')}
+  {for(let i=0;i<6;i++){const z=-60+i*7;const w=box(world,3,.3,7.5,M.water,56,hY(56,z)-.3,z,{shadow:false})}const fall=box(world,3,12,.8,M.water,56,hY(56,-64)-10,-64,{shadow:false});fall.material=new THREE.MeshStandardMaterial({color:0xcfeaf4,transparent:true,opacity:.8});addStation({id:'fall',name:'Elk Falls',type:'Waterfall · estate intake',obj:fall,pos:new THREE.Vector3(56,hY(56,-62),-62)})}
+  // mist planes
+  for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(50,14),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.22,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(rnd(-60,60),rnd(2,10),rnd(-50,30));world.add(m);mists.push({m,v:rnd(.5,1.2)})}
+  // pickers, tractor, drone
+  const picker=i=>{const g=new THREE.Group();world.add(g);for(let k=0;k<3;k++){box(g,.5,1.1,.4,[M.acc,M.yellow,M.white][(i+k)%3],k*.9-.9,.3,0);sph(g,.22,M.dark,k*.9-.9,1.65,0);box(g,.5,.5,.5,new THREE.MeshStandardMaterial({color:0xc9a06a}),k*.9-.9,.9,-.4)}
+    const plot=plots[(i*5)%plots.length];const a=addAgent({id:'pk'+i,name:'Group '+(i+1),sub:'Plucking '+plot.name,g,pts:plot.pts,maxSpeed:1.2,lane:'row'+i,loop:false,off:0,basket:0,plot});a.pos.set(...plot.pts[0]);a.i=1;pickers.push(a);return a};
+  for(let i=0;i<3;i++)picker(i);c.picker=picker;
+  {const g=new THREE.Group();world.add(g);box(g,3,1.6,1.8,new THREE.MeshStandardMaterial({color:0xb5432b}),0,.5,0);box(g,1.2,1.2,1.4,M.glass,-.3,2.1,0,{shadow:false});box(g,3,.4,1.8,M.mid,-3.6,.6,0);const ld=box(g,2.6,.8,1.6,M.acc,-3.6,1,0);ld.visible=false;g.userData.load=ld;for(const [dx,dz] of[[.9,-1],[.9,1],[-.9,-1],[-.9,1],[-3.6,-1],[-3.6,1]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.4,10),M.tyre);w.rotation.x=Math.PI/2;w.position.set(dx,.5,dz);g.add(w)}
+    tractor=addAgent({id:'tractor',name:'Tractor + trailer',sub:'Shed → factory',g,pts:[[-30,20],[-10,26],[14,26],[26,28]],maxSpeed:3.5,lane:'road',loop:false,stopAt:[0,3],stopTime:6});tractor.pos.set(-30,20);tractor.i=1}
+  {const g=new THREE.Group();world.add(g);box(g,1.2,.25,1.2,M.dark,0,0,0);for(const [dx,dz] of[[-.7,-.7],[.7,-.7],[-.7,.7],[.7,.7]]){const r=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.05,10),M.acc);r.position.set(dx,.25,dz);g.add(r)}drone=addAgent({id:'drone',name:'Spray drone',sub:'Foliar spray',g,y:0,pts:[[-40,-20],[40,-20],[40,-5],[-40,-5]],maxSpeed:6,lane:'air'})}
+ },
+ apply(c){const u=c.G.up;c.yieldMul=1+.15*u.prune;c.facMul=1-.2*u.wither;c.gradeBonus=4*u.drone;c.passive=40*u.stay;c.frostOk=!!u.frost;c.priceMul=1+.12*u.organic;while(pickers.length<3+u.pick)c.picker(pickers.length)},
+ priceMul:c=>c.priceMul||1,rate:c=>pickers.length*.9*c.price(c.G.active)*(c.yieldMul||1)*.72/4+(c.passive||0),
+ tick(c,dt){const t=c.simT;const frost=c.WX.name==='Winter frost'&&!c.frostOk;const pluckMul=frost?.5:c.WX.name==='Harvest sunshine'?1.3:1;
+  plots.forEach(p=>{p.flush=clamp(p.flush+dt*.004*(c.WX.name==='Monsoon mist'?1.5:1),0,1);p.rows.forEach(m=>m.material=bushFor(p.flush))});
+  function bushFor(f){bushFor.c=bushFor.c||[0x1f6b43,0x2f8f5b,0x5fb57d].map(h=>new THREE.MeshStandardMaterial({color:h,roughness:1}));return bushFor.c[f<.35?0:f<.7?1:2]}
+  // pickers: walk the row plucking, then to shed to weigh, then to the readiest plot
+  c.agents.forEach(a=>{a.g.position.y=hY(a.pos.x,a.pos.y)+(a===drone?7:.1)});
+  for(const pk of pickers){if(pk.mode==='toShed'){if(Math.hypot(pk.pos.x+30,pk.pos.y-14)<1.5&&pk.dwell<=0&&!pk.weighed){pk.weighed=true;pk.dwell=3;pk.dwellStatus='weighing';const kg=pk.basket;plucked+=kg;batches.push({id:batchSeq++,kg,ph:1,t:0,moist:78});if(batches.length>30)batches.shift();c.earn(Math.round(kg*c.price(c.G.active)*.5),shed.obj);c.log('ok',`${pk.name} weighed ${kg.toFixed(0)} kg`);pk.basket=0;tractor.cargo=(tractor.cargo||0)+kg}
+      if(pk.weighed&&pk.dwell<=0){const plot=plots.slice().sort((a,b)=>b.flush-a.flush)[0];pk.plot=plot;pk.mode='toRow';pk.pts=[[pk.pos.x,pk.pos.y],plot.pts[0]];pk.i=1;pk.dir=1;pk.sub='Walking to '+plot.name;pk.weighed=false}continue}
+    if(pk.mode==='toRow'){if(Math.hypot(pk.pos.x-pk.plot.pts[0][0],pk.pos.y-pk.plot.pts[0][1])<1){pk.mode=null;pk.pts=pk.plot.pts;pk.i=1;pk.dir=1;pk.sub='Plucking '+pk.plot.name}continue}
+    if(pk.status==='moving'&&pk.plot.flush>.05){const kg=dt*.9*pluckMul*(c.yieldMul||1)*pk.plot.flush;pk.basket+=kg;pk.plot.flush=Math.max(0,pk.plot.flush-dt*.004);pk.plot.kg+=kg;if(Math.random()<dt*2)c.burst(pk.g,1,.3,.6)}
+    if(pk.basket>=20||(pk.plot.flush<.05&&pk.basket>4)){pk.mode='toShed';pk.pts=[[pk.pos.x,pk.pos.y],[-30,20],[-30,14]];pk.i=1;pk.dir=1;pk.sub='To weighing shed'}}
+  // tractor hauls to factory
+  if(tractor.cargo>0&&tractor.dwell>0&&Math.hypot(tractor.pos.x+30,tractor.pos.y-20)<2)tractor.g.userData.load.visible=true;
+  if(tractor.g.userData.load.visible&&Math.hypot(tractor.pos.x-26,tractor.pos.y-28)<2&&tractor.dwell>0){tractor.g.userData.load.visible=false;tractor.cargo=0}
+  // factory batches
+  for(const b of batches){if(b.ph>=5)continue;b.t+=dt/(c.facMul||1);const need=[0,6,10,8,10,12][b.ph];b.moist=Math.max(3,b.moist-dt*1.5);if(b.t>need){b.ph++;b.t=0;if(b.ph===5){const dried=b.kg*.22;output+=dried;c.earn(Math.round(dried*c.price(c.G.active)),factory.obj);c.log('ok',`Batch B${b.id} dried · ${dried.toFixed(1)} kg`)}}}
+  if(batches.some(b=>b.ph>=2&&b.ph<5)&&Math.random()<dt*8)factory.stacks.forEach(s=>{if(Math.random()<.5){const o=new THREE.Object3D();o.position.copy(s);c.world.add(o);c.burst(o,1,.3,1.2);c.world.remove(o)}});
+  grade=lerp(grade,78+(c.gradeBonus||0)+(c.WX.name==='Harvest sunshine'?4:c.WX.name==='Monsoon mist'?-3:0)+(c.G.active==='tips'?6:0),dt*.05);
+  mists.forEach(m=>{m.m.position.x+=m.v*dt;if(m.m.position.x>80)m.m.position.x=-80;m.m.material.opacity=c.WX.name==='Monsoon mist'?.45:c.nightT>.5?.3:.18})},
+ slow(c){c.kpi(0,`${c.fmt(plucked)}<small>kg</small>`,`${pickers.length} groups · ${plots.filter(p=>p.flush>.6).length} plots ready`,'');c.spark(0,plucked);c.kpi(1,`${c.fmt(output)}<small>kg</small>`,`${batches.filter(b=>b.ph<5).length} batches in process`,'');c.spark(1,output);c.kpi(2,`${grade.toFixed(0)}`,grade>88?'FTGFOP · premium':grade>80?'TGFOP':'BOP · bulk',grade<78?'warn':'');c.spark(2,grade)},
+ detail(c,d){if(d.kind==='agent'){const a=d.agent;return{type:a.sub,status:a.status,stats:[['Task',a.sub],['Basket',a.basket!==undefined?a.basket.toFixed(1)+' kg':'—'],['Speed',(a.speed*3.6).toFixed(1)+' km/h'],['Trips',Math.floor(a.trips)]],bar:a.basket!==undefined?a.basket/20*100:null}}
+  const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.rows)return{type:s.type,status:s.flush>.6?'ready to pluck':s.flush>.3?'growing':'just plucked',level:s.flush<.3?'warn':'',stats:[['Flush',Math.round(s.flush*100)+' %'],['Plucked today',s.kg.toFixed(0)+' kg'],['Slope',s.upper?'upper':'lower'],['Clone','TRI-2025']],bar:s.flush*100};
+  if(s.id==='factory')return{type:s.type,status:batches.some(b=>b.ph<5)?'processing':'idle',stats:[['Output today',output.toFixed(0)+' kg'],['Batches',batches.length],['Grade',grade.toFixed(0)],['Price',c.fmt(c.price(c.G.active))+' ⚡/kg']]};
+  if(s.id==='shed')return{type:s.type,status:'open',stats:[['Weighed today',plucked.toFixed(0)+' kg'],['Trailer load',(tractor.cargo||0).toFixed(0)+' kg']]};
+  return{type:s.type,status:'open',stats:[['Flow','2.1 m³/s']]}}
+});
+</script></body></html>
