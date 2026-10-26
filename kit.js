@@ -83,7 +83,7 @@ function stepAgents(dt){for(const c of agents){if(c.paused)continue;if(c.dwell>0
   let block=false;for(const o of agents){if(o===c||o.lane!==c.lane)continue;const rx=o.vis.x-c.vis.x,rz=o.vis.y-c.vis.y;const dist=Math.hypot(rx,rz);if(dist>5)continue;const along=rx*hx+rz*hz,lat=Math.abs(-rx*hz+rz*hx);if(along>0&&along<(c.gap||3.2)&&lat<1){block=true;break}const same=o.hx*hx+o.hz*hz>.7;if(!same&&dist<2.2&&lat<1&&along>0&&agents.indexOf(o)<agents.indexOf(c)&&o.speed>0){block=true;break}}
   if(block){c.speed=Math.max(0,c.speed-dt*8);if(c.status!=='yielding'){c.status='yielding';c.yield++}}else{c.speed=Math.min(c.maxSpeed,c.speed+dt*3);c.status='moving'}
   const step=Math.min(d,c.speed*dt);c.pos.x+=hx*step;c.pos.y+=hz*step;
-  if(d<.15){if(c.loop){c.i=(c.i+1)%c.pts.length;if(c.i===0){c.trips++;c.onLap?.(c)}}else{c.i+=c.dir;if(c.i>=c.pts.length||c.i<0){c.dir*=-1;c.i+=c.dir*2;c.trips+=.5;c.onEnd?.(c)}}if(c.stopAt&&c.stopAt.includes(c.i)){c.dwell=c.stopTime||2.5}}
+  if(d<.15){const arrived=c.i;if(c.loop){c.i=(c.i+1)%c.pts.length;if(c.i===0){c.trips++;c.onLap?.(c)}}else{c.i+=c.dir;if(c.i>=c.pts.length||c.i<0){c.dir*=-1;c.i+=c.dir*2;c.trips+=.5;c.onEnd?.(c)}}if(c.stopAt&&c.stopAt.includes(arrived)){c.dwell=c.stopTime||2.5}}
   c.g.position.set(c.vis.x,c.y||0,c.vis.y);if(c.speed>.1)c.g.rotation.y=lerp(c.g.rotation.y,Math.atan2(-hz,hx),Math.min(1,dt*8))}}
 /* ───── camera & controls ───── */
 const camera=new THREE.OrthographicCamera(-1,1,1,-1,-400,600);const ov=def.overview||{t:[0,0,0],z:50};
