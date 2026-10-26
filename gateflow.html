@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Gateflow — airport apron control</title>
+<meta name="description" content="Gateflow: a live 3D airport you can run. World 01 of Voltline Worlds."><meta name="theme-color" content="#f3f4f6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="kit.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23FF6A1A'/%3E%3Cpath d='M12 36l40-20-14 18 6 14-10-6-10 8z' fill='%23fff'/%3E%3C/svg%3E">
+<script src="meta.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+import {createWorld,THREE,rnd,lerp,clamp,smooth} from './kit.js';
+const planes=[],stands=[],flights=[];let movements=0,movH=0,onTime=96,tug,fuelT,caterT,bagT,busT,runwayBusy=null;
+const GATES=[-32,-16,0,16,32],STAND_Z=4,TAXI_Z=-16,RWY_Z=-32;
+const PHASES=[['On block',8],['Deboard',10],['Clean and cater',14],['Fuel',10],['Board',14],['Pushback',8]];
+const AIRLINES=[['VL','Voltline Air'],['SJ','Sanjai Express'],['CH','Chennai Skies']];
+createWorld({
+ id:'gateflow',num:1,name:'Gateflow',tag:'Airport apron control',site:'Sanjai International · apron A',accent:'#FF6A1A',accentRgb:'255,106,26',accentInk:'#b1420a',
+ wordmark:'Gate<b>flow</b>',intro:'Five gates, a runway, a cargo apron and an open hangar. <b>Every turnaround you complete pays.</b> Tier up the apron and bank Charter.',
+ ldSteps:['lighting the runway','rostering ground crews','clearing the approach','first arrival'],plantName:'Apron control',productLabel:'Flight contracts',
+ sky:0xf5f2ee,groundStops:['#f6f4ef','#e8e3d9','#cfc8ba'],pal:{wall:0xf7f3ec,asphalt:0xb9bcc2,floor:0xd6d2c8},temps:[34,27,12,41],wx:{rain:'Monsoon',fog:'Winter fog',heat:'Summer heat'},lamps:[[-30,10],[20,10],[60,0]],
+ overview:{t:[0,0,-4],z:60},introFrom:[0,4,6],
+ areas:{terminal:{num:'ST-01',label:'Terminal',t:[0,2,10],z:26},cargo:{num:'ST-02',label:'Cargo',t:[-64,2,10],z:18},hangar:{num:'ST-03',label:'Hangar',t:[68,2,0],z:18},runway:{num:'ST-04',label:'Runway',t:[0,0,-30],z:34},landside:{num:'ST-05',label:'Landside',t:[0,1,40],z:24}},
+ kpis:[{label:'Movements per hour'},{label:'On-time'},{label:'Stand occupancy'}],
+ products:{dom:{name:'Domestic turnarounds',sub:'A320 · 180 pax',price:18000,unlock:0,unit:'per flight',svg:'<path d="M4 18l34-10-12 8 4 10-8-4-6 6z" fill="currentColor" opacity=".9"/>'},intl:{name:'International',sub:'wide-body · +80%',price:32000,unlock:120000,unit:'per flight',svg:'<path d="M2 20l40-12-14 8 6 12-10-5-8 7z" fill="currentColor" opacity=".9"/>'},cargo:{name:'Cargo charters',sub:'freighter · 2.8×',price:50000,unlock:600000,unit:'per flight',svg:'<rect x="6" y="8" width="32" height="14" rx="2" fill="currentColor" opacity=".9"/>'}},
+ upgrades:[{id:'turn',name:'Fast turnaround',fx:'Ground phases 15% shorter per tier',cost:9000},{id:'plane',name:'Extra aircraft',fx:'+1 aircraft on the rotation per tier',cost:15000},{id:'bridge',name:'Dual jet bridges',fx:'+10% revenue per flight',cost:12000},{id:'hydrant',name:'Fuel hydrant',fx:'Fuel phase 40% faster',cost:8000},{id:'apron',name:'Cargo apron',fx:'+60 ⚡/s passive per tier',cost:10000},{id:'ils',name:'ILS Cat III',fx:'Halves the weather penalty',cost:14000},{id:'night',name:'Night ops',fx:'Full revenue after dark',cost:16000}],
+ tabs:[{id:'stands',label:'Stands',cols:['Stand','Aircraft','Phase','Time','Status'],rows:c=>stands.map(s=>({pick:{kind:'station',id:s.id},cells:[s.name,s.plane?s.plane.reg:'—',s.plane?s.plane.phaseName:'—',s.plane?Math.round(s.plane.phaseT)+' s':'—',s.plane?'occupied':'open']})),meta:c=>stands.filter(s=>s.plane).length+' / 5 occupied'},
+       {id:'veh',label:'Vehicles',cols:['Vehicle','Task','Speed','Trips','Status'],rows:c=>c.agents.map(a=>({pick:{kind:'agent',agent:a},cells:[a.name,a.sub,(a.speed*3.6).toFixed(0)+' km/h',Math.floor(a.trips),a.status]}))},
+       {id:'fl',label:'Flights',cols:['Flight','Reg','Pax','Fuel','Status'],rows:c=>planes.map(p=>({pick:{kind:'station',id:p.id},cells:[p.flight,p.reg,p.pax,p.fuel.toFixed(1)+' t',p.state]}))}],
+ build(c){const {box,cyl,sph,M,world,stencil,lane,contact,tree,addStation,addAgent}=c;
+  // runway, taxiway, apron
+  box(world,180,.25,9,M.asphalt,0,-.1,RWY_Z);for(let x=-88;x<=88;x+=8){box(world,1.6,.08,.9,M.white,x,.16,RWY_Z,{shadow:false});box(world,.4,.3,.4,M.accGlow,x,.1,RWY_Z-5.2,{shadow:false});box(world,.4,.3,.4,M.accGlow,x,.1,RWY_Z+5.2,{shadow:false})}
+  box(world,150,.2,6,M.asphalt,0,-.1,TAXI_Z);for(const x of[-70,70])box(world,6,.2,12,M.asphalt,x,-.1,(TAXI_Z+RWY_Z)/2);box(world,110,.2,16,M.floor,0,-.08,STAND_Z-2);
+  for(const x of GATES){lane(x,TAXI_Z,x,STAND_Z-6,.04);box(world,.2,.08,10,M.yellow,x,.12,STAND_Z-3,{shadow:false})}
+  stencil('RWY 07 · SANJAI INTL',-40,RWY_Z-7.5,22,0,'#9aa3b2');stencil('ST-01 TERMINAL',0,STAND_Z-9.5,14);
+  // terminal with glass facade + 5 jet bridges
+  {const g=new THREE.Group();world.add(g);box(g,96,7,12,M.wall,0,0,20);box(g,96,.8,.6,M.acc,0,7,14.2);const gl=box(g,94,3.8,.4,M.glass,0,1.6,13.9,{shadow:false});for(let x=-44;x<=44;x+=4){const w=box(g,2.6,2.6,.2,M.window,x,2.2,13.7,{shadow:false});w.userData.win=1}box(g,100,.6,14,M.grey,0,7.3,20);
+    GATES.forEach((x,i)=>{box(g,2,.6,8,M.white,x+3,3.2,10);box(g,1.2,2.4,1.2,M.mid,x+3,.4,8);box(g,2,2.6,8.4,M.glass,x+3,3.5,10,{shadow:false});stands.push(addStation({id:'stand'+i,name:`Stand ${i+1}`,type:'Contact stand · jet bridge',obj:null,pos:new THREE.Vector3(x,2,STAND_Z),x,plane:null}))});
+    addStation({id:'term',name:'Terminal 1',type:'5 contact gates · 2.1M pax/yr',obj:g,pos:new THREE.Vector3(0,4,20)})}
+  // control tower, cargo, hangar
+  {const g=new THREE.Group();g.position.set(52,0,16);world.add(g);cyl(g,1.6,2.2,16,M.white,0,0,0,10);cyl(g,3.4,2.6,2.8,M.glass,0,16,0,10);cyl(g,3.6,3.6,.5,M.acc,0,18.8,0,10);addStation({id:'twr',name:'Control tower',type:'ATC · 2 positions',obj:g,pos:new THREE.Vector3(52,12,16)})}
+  {const g=new THREE.Group();world.add(g);box(g,26,7,12,M.wall,-64,0,20);box(g,26.6,.5,12.6,M.grey,-64,7,20);box(g,27,.6,.6,M.acc,-64,6.4,13.8);for(let i=0;i<8;i++)box(g,2.2,2,2.2,i%2?M.copper:M.white,-74+i*2.8,0,10);stencil('ST-02 CARGO',-64,6,10);addStation({id:'cargo',name:'Cargo terminal',type:'ULD build-up · 3 docks',obj:g,pos:new THREE.Vector3(-64,4,18)})}
+  {const g=new THREE.Group();world.add(g);box(g,24,.3,20,M.asphalt,70,-.1,2);for(const dz of[-9,9])box(g,24,9,.8,M.wall,70,0,2+dz);box(g,.8,9,18,M.wall,82,0,2);box(g,26,.8,20,M.grey,70,9,2);box(g,24,2,.6,M.acc,70,7.2,-7.3);stencil('ST-03 MRO HANGAR',70,-10,14);addStation({id:'hangar',name:'MRO hangar',type:'Line maintenance · bay 1',obj:g,pos:new THREE.Vector3(70,4,2)})}
+  // landside: forecourt loop, car parks, road, palms
+  lane(-50,34,50,34);lane(50,34,50,44);lane(50,44,-50,44);lane(-50,44,-50,34);box(world,110,.2,8,M.asphalt,0,-.1,52);for(let x=-48;x<48;x+=6)for(let z=0;z<2;z++)box(world,3.6,.05,2,M.lane,x,.1,38+z*2.6,{shadow:false});
+  for(const [x,z] of[[-60,30],[60,30],[-56,56],[56,56],[0,58],[-30,58],[30,58]]){const g=new THREE.Group();g.position.set(x,0,z);world.add(g);cyl(g,.25,.4,5,M.copper,0,0,0,8);for(let k=0;k<5;k++){const f=box(g,3.2,.15,.6,M.leaf,1.2,5,0);f.rotation.y=k*Math.PI*2/5;f.rotation.z=-.5}}
+  stencil('ST-05 LANDSIDE · DROP-OFF',0,30,22);
+  // aircraft
+  const mkPlane=(i,col)=>{const g=new THREE.Group();world.add(g);const fus=cyl(g,1.1,1.1,16,M.white,0,1.6,0,14);fus.rotation.z=Math.PI/2;const nose=new THREE.Mesh(new THREE.SphereGeometry(1.1,14,10),M.white);nose.position.set(8,2.7,0);nose.scale.x=1.8;nose.castShadow=true;g.add(nose);const tail=new THREE.Mesh(new THREE.CylinderGeometry(.3,1.1,4,14),M.white);tail.rotation.z=Math.PI/2;tail.position.set(-10,3,0);g.add(tail);
+    const wing=box(g,3.4,.25,22,M.white,.5,1.9,0);wing.rotation.y=.15;const fin=box(g,3,4,.3,col,-9,3.4,0);box(g,1.6,.2,6,M.white,-9.5,4.2,0);for(const dz of[-4.5,4.5]){const e=cyl(g,.75,.75,2.6,M.mid,1.5,.9,dz,12);e.rotation.z=Math.PI/2;box(g,.8,.3,.3,col,1.5,2.3,dz)}
+    for(let x=-6;x<=6;x+=1.1){const w=box(g,.6,.4,.1,M.window,x,2.9,1.1,{shadow:false});w.userData.win=1;const w2=box(g,.6,.4,.1,M.window,x,2.9,-1.1,{shadow:false});w2.userData.win=1}box(g,1.2,.6,.2,M.dark,8.2,3,1,{shadow:false});
+    const gear=new THREE.Group();g.add(gear);for(const [gx,gz] of[[6.5,0],[-.5,-1.6],[-.5,1.6]]){box(gear,.2,1.2,.2,M.dark,gx,.4,gz);const t=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.3,10),M.tyre);t.rotation.x=Math.PI/2;t.position.set(gx,.42,gz);gear.add(t)}
+    const al=AIRLINES[i%3];const p=addStation({id:'ac'+i,name:`${al[0]}${110+i*7}`,type:`A320 · ${al[1]}`,obj:g,pos:new THREE.Vector3(0,3,0),g,gear,flight:`${al[0]}${110+i*7}`,reg:`VT-${String.fromCharCode(65+i)}G${String.fromCharCode(66+i)}`,pax:0,fuel:rnd(6,9),state:'approach',t:-i*90,stand:null,phase:0,phaseT:0,phaseName:'—',x:-140,y:22,z:RWY_Z,hdg:0,speed:0,col:col});planes.push(p);return p};
+  [M.acc,new THREE.MeshStandardMaterial({color:0x1e5eff,roughness:.6}),new THREE.MeshStandardMaterial({color:0x10b981,roughness:.6})].forEach((col,i)=>{if(i<2)mkPlane(i,col)});c.mkPlane=mkPlane;c.cols=[M.acc,new THREE.MeshStandardMaterial({color:0x1e5eff,roughness:.6}),new THREE.MeshStandardMaterial({color:0x10b981,roughness:.6})];
+  // ground vehicles (agents on the apron road z=STAND_Z-8 ↔ bays at x=-50)
+  const veh=(name,sub,col,w=2.6,h=1.3,d=1.4)=>{const g=new THREE.Group();world.add(g);box(g,w,h,d,col,0,.3,0);for(const [dx,dz] of[[-w/3,-d/2],[w/3,-d/2],[-w/3,d/2],[w/3,d/2]]){const t=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.3,10),M.tyre);t.rotation.x=Math.PI/2;t.position.set(dx,.32,dz);g.add(t)}return g};
+  const APR=STAND_Z-8;const loop=[[-54,APR],[54,APR],[54,APR+3],[-54,APR+3]];
+  tug=addAgent({id:'tug',name:'Pushback tug',sub:'Pushback',g:veh('tug','',M.yellow,2.2,1,1.4),pts:loop,maxSpeed:4,lane:'apron'});
+  bagT=addAgent({id:'bag',name:'Baggage tug',sub:'Baggage · 3 carts',g:(()=>{const g=veh('b','',M.acc,2,1,1.3);for(let i=1;i<=3;i++)box(g,1.6,1,1.2,M.mid,-2.2*i,.2,0);return g})(),pts:loop,maxSpeed:4.5,lane:'apron'});bagT.pos.set(-30,APR);bagT.i=1;
+  fuelT=addAgent({id:'fuel',name:'Fuel dispenser',sub:'Hydrant fuelling',g:(()=>{const g=veh('f','',M.white,4,1.4,1.6);box(g,2.6,1.2,1.4,M.acc,.4,1.7,0);return g})(),pts:loop,maxSpeed:4,lane:'apron'});fuelT.pos.set(0,APR);fuelT.i=1;
+  caterT=addAgent({id:'cater',name:'Catering truck',sub:'Galley service',g:(()=>{const g=veh('c','',M.white,4,1.4,1.8);const bx=box(g,3,2,1.8,M.acc,.6,1.7,0);g.userData.box=bx;return g})(),pts:loop,maxSpeed:4,lane:'apron'});caterT.pos.set(20,APR);caterT.i=1;
+  busT=addAgent({id:'bus',name:'Crew bus',sub:'Crew transfer',g:veh('bus','',M.mid,4.6,1.8,1.8),pts:loop,maxSpeed:5,lane:'apron'});busT.pos.set(40,APR);busT.i=1;
+  addAgent({id:'fork',name:'Cargo forklift',sub:'ULD transfer',g:veh('fk','',M.yellow,1.8,1.2,1.4),pts:[[-74,8],[-52,8],[-52,-2],[-74,-2]],maxSpeed:3,lane:'cargo'});
+  // landside traffic with kerb stops
+  const kerb=[[-50,34],[-20,34],[20,34],[50,34],[50,44],[-50,44]];['Taxi','Auto-rickshaw','Car','Airport bus','Taxi','Car'].forEach((n,i)=>{const col=[M.yellow,M.leaf,M.white,M.acc,M.yellow,M.dark][i];const a=addAgent({id:'ls'+i,name:`${n} ${i+1}`,sub:'Drop-off loop',g:veh(n,'',col,n==='Airport bus'?5:2.8,n==='Airport bus'?1.8:1.1,1.5),pts:kerb,maxSpeed:4+i*.4,lane:'road',stopAt:[1,2],stopTime:3});a.pos.set(-50+i*16,34);a.i=1});
+ },
+ apply(c){const u=c.G.up;c.turnMul=1-.15*u.turn;c.fuelMul=1-.4*Math.min(1,u.hydrant)*(.5+u.hydrant/6);c.priceMul=1+.1*u.bridge;c.passive=60*u.apron;c.ilsMul=u.ils?.5:1;c.nightOk=!!u.night;while(planes.length<2+u.plane&&planes.length<5){const p=c.mkPlane(planes.length,c.cols[planes.length%3]);p.t=-60*planes.length}},
+ priceMul:c=>(c.priceMul||1)*((c.nightT>.5&&!c.nightOk)?.6:1),rate:c=>planes.length*c.price(c.G.active)/(260*(c.turnMul||1))+(c.passive||0),
+ tick(c,dt){const t=c.simT;const wxPen=(c.WX.name==='Clear'||c.WX.name==='Summer heat')?1:1+.6*(c.ilsMul||1);
+  for(const p of planes){p.t+=dt;if(p.t<0){p.g.visible=false;continue}p.g.visible=true;
+    switch(p.state){
+     case 'approach':{if(runwayBusy&&runwayBusy!==p){p.x=Math.min(p.x,-150);break}runwayBusy=p;p.speed=22;p.x+=p.speed*dt;const f=clamp((p.x+140)/80,0,1);p.y=lerp(22,0,smooth(f));p.z=RWY_Z;p.hdg=0;p.gear.visible=f>.3;if(p.x>=-60){p.state='rollout';p.y=0;c.burst(p.g,6,1,1)}break}
+     case 'rollout':{p.speed=lerp(p.speed,4,dt*.6);p.x+=p.speed*dt;if(p.x>50){p.state='taxiIn';p.stand=stands.find(s=>!s.plane&&!s.reserved);if(p.stand){p.stand.reserved=p}p.path=[[70,RWY_Z],[70,TAXI_Z],[p.stand?p.stand.x:0,TAXI_Z],[p.stand?p.stand.x:0,STAND_Z]];p.pi=0;runwayBusy=null;p.flight=`${p.flight.slice(0,2)}${100+Math.floor(rnd(10,900))}`;p.pax=Math.round(rnd(120,180))}break}
+     case 'taxiIn':case 'taxiOut':{const [tx,tz]=p.path[p.pi];const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);const v=p.state==='taxiIn'&&p.pi===p.path.length-1&&d<10?1.5:5;if(d<.3){p.pi++;if(p.pi>=p.path.length){if(p.state==='taxiIn'){p.state='turn';p.phase=0;p.phaseT=PHASES[0][1]*c.turnMul;p.phaseName=PHASES[0][0];p.stand.plane=p;p.stand.reserved=null;p.hdg=Math.PI/2;c.addAlert('ok',`${p.flight} on blocks`,`Stand ${stands.indexOf(p.stand)+1} · ${p.pax} pax`,{kind:'station',id:p.id})}else{p.state='takeoff';p.speed=0;p.x=-78;p.z=RWY_Z;p.hdg=0}}}else{p.x+=dx/d*v*dt;p.z+=dz/d*v*dt;p.hdg=Math.atan2(-dz,dx)}p.y=0;break}
+     case 'turn':{p.phaseT-=dt*(p.phase===3?1/(c.fuelMul||1):1);const ph=PHASES[p.phase];p.phaseName=ph[0];
+       if(p.phase===3)p.fuel=Math.min(12,p.fuel+dt*.25);
+       if(p.phaseT<=0){p.phase++;if(p.phase>=PHASES.length){p.state='push';p.pushT=0;p.stand.plane=null;const v=Math.round(c.price(c.G.active));c.earn(v,p.g);movements++;movH++;if(Math.random()<.15){onTime=Math.max(80,onTime-1.2);c.addAlert('warn',`${p.flight} delayed`,'Late inbound crew',{kind:'station',id:p.id})}}else{p.phaseT=PHASES[p.phase][1]*c.turnMul;if(p.phase===2){caterT.dwell=6;caterT.dwellStatus='catering'}if(p.phase===3){fuelT.dwell=6;fuelT.dwellStatus='fuelling'}if(p.phase===1){bagT.dwell=5;bagT.dwellStatus='unloading'}}}break}
+     case 'push':{p.pushT+=dt;const f=clamp(p.pushT/8,0,1);p.z=lerp(STAND_Z,TAXI_Z,smooth(f));p.hdg=lerp(Math.PI/2,Math.PI,smooth(f));tug.paused=true;tug.g.position.set(p.x+Math.cos(p.hdg+Math.PI)*9.5,0,p.z-Math.sin(p.hdg+Math.PI)*9.5);tug.g.rotation.y=p.hdg;tug.status='pushing';if(f>=1){p.state='taxiOut';p.path=[[-70,TAXI_Z],[-70,RWY_Z-.01]];p.pi=0;tug.paused=false;tug.status='moving'}break}
+     case 'takeoff':{if(runwayBusy&&runwayBusy!==p)break;runwayBusy=p;p.speed=lerp(p.speed,30,dt*.5);p.x+=p.speed*dt*wxPen**-1;if(p.x>20){const f=clamp((p.x-20)/90,0,1);p.y=f*f*26;p.gear.visible=f<.3}if(p.x>130){p.state='approach';p.x=-150;p.y=22;p.t=-20;runwayBusy=null;movements++;movH++}break}}
+    p.status=p.state==='turn'?p.phaseName.toLowerCase():p.state;if(p.state!=='turn')p.phaseName='—';p.g.position.set(p.x,p.y,p.z);p.g.rotation.y=p.hdg;p.g.rotation.x=p.state==='takeoff'&&p.x>20?-.18:p.state==='approach'?.08:0;p.pos.set(p.x,p.y+3,p.z)}
+  if(caterT.g.userData.box)caterT.g.userData.box.position.y=lerp(caterT.g.userData.box.position.y,caterT.dwell>0?3.2:1.7,dt*2);
+  onTime=lerp(onTime,97,dt*.01)},
+ slow(c){movH*=.985;const m=Math.round(movH*20);c.kpi(0,`${m}<small>/h</small>`,`${planes.length} aircraft on rotation`,m<8?'warn':'');c.spark(0,m);c.kpi(1,`${onTime.toFixed(1)}<small>%</small>`,c.WX.name==='Clear'?'CAVOK':c.WX.name+' · reduced flow',onTime<88?'bad':onTime<93?'warn':'');c.spark(1,onTime);const occ=stands.filter(s=>s.plane).length/5*100;c.kpi(2,`${occ.toFixed(0)}<small>%</small>`,`${stands.filter(s=>s.plane).length} of 5 stands occupied`,'');c.spark(2,occ)},
+ detail(c,d){if(d.kind==='agent'){const a=d.agent;return{type:a.sub,status:a.status,level:a.status==='yielding'?'warn':'',stats:[['Speed',(a.speed*3.6).toFixed(0)+' km/h'],['Trips',Math.floor(a.trips)],['Yields',a.yield]]}}
+  const s=c.stations.find(x=>x.id===d.id);if(!s)return{};if(s.gear)return{type:s.type,status:s.state==='turn'?s.phaseName:s.state,level:s.state==='turn'?'':'',stats:[['Flight',s.flight],['Registration',s.reg],['Pax',s.pax],['Fuel',s.fuel.toFixed(1)+' t'],['Altitude',Math.round(s.y*30)+' ft'],['Stand',s.stand?stands.indexOf(s.stand)+1:'—']],bar:s.state==='turn'?(s.phase+1)/6*100:null};
+  if(s.x!==undefined&&s.name.startsWith('Stand'))return{type:s.type,status:s.plane?'occupied':'open',stats:[['Aircraft',s.plane?s.plane.reg:'—'],['Phase',s.plane?s.plane.phaseName:'—'],['Bridge','docked'],['GPU','400 Hz on']]};
+  return{type:s.type,status:'open',stats:[['Movements today',movements],['Shift','A']]}}
+});
+</script></body></html>

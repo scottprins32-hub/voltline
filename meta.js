@@ -6,7 +6,7 @@ const WORLDS=[
  {id:'gridleaf', num:7, name:'Gridleaf', tag:'Wind & solar farm',    accent:'#3DBE6E',tier:2,cost:1, file:'gridleaf.html', status:'play',icon:'turbine'},
  {id:'berthwise',num:3, name:'Berthwise',tag:'Container port',       accent:'#0FA3A3',tier:2,cost:1, file:'berthwise.html',status:'play',icon:'crane'},
  {id:'railgrid', num:6, name:'Railgrid', tag:'Metro rail control',   accent:'#00A86B',tier:2,cost:1, file:'railgrid.html', status:'play',icon:'train'},
- {id:'gateflow', num:1, name:'Gateflow', tag:'Airport apron',        accent:'#FF6A1A',tier:3,cost:3, file:'',status:'soon',icon:'plane'},
+ {id:'gateflow', num:1, name:'Gateflow', tag:'Airport apron',        accent:'#FF6A1A',tier:3,cost:3, file:'gateflow.html',status:'play',icon:'plane'},
  {id:'dabba',    num:5, name:'Dabba',    tag:'Cloud kitchen city',   accent:'#E8452C',tier:3,cost:3, file:'',status:'soon',icon:'scooter'},
  {id:'fieldmind',num:15,name:'Fieldmind',tag:'Smart farm',           accent:'#84CC16',tier:3,cost:3, file:'',status:'soon',icon:'silo'},
  {id:'coreline', num:8, name:'Coreline', tag:'AI data centre',       accent:'#22D3EE',tier:3,cost:3, file:'',status:'soon',icon:'rack'},
